@@ -1,0 +1,40 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="GoUnhandledErrorResult" enabled="true" level="WARNING" enabled_by_default="true">
+      <functions>
+        <function importPath="errors" name="Unwrap" />
+        <function importPath="math/rand" name="Read" />
+        <function importPath="fmt" name="Printf" />
+        <function importPath="fmt" name="Print" />
+        <function importPath="errors" name="New" />
+        <function importPath="fmt" name="Println" />
+        <function importPath="fmt" name="Errorf" />
+        <function importPath="errors" name="Join" />
+        <function importPath="fmt" name="Fprintln" />
+        <function importPath="fmt" name="Fprintf" />
+      </functions>
+      <methods>
+        <method importPath="hash" receiver="Hash" name="Write" />
+        <method importPath="bytes" receiver="*Buffer" name="WriteString" />
+        <method importPath="strings" receiver="*Builder" name="WriteRune" />
+        <method importPath="bytes" receiver="*Buffer" name="Write" />
+        <method importPath="bytes" receiver="*Buffer" name="WriteByte" />
+        <method importPath="strings" receiver="*Builder" name="Write" />
+        <method importPath="math/rand" receiver="*Rand" name="Read" />
+        <method importPath="strings" receiver="*Builder" name="WriteString" />
+        <method importPath="bytes" receiver="*Buffer" name="WriteRune" />
+        <method importPath="strings" receiver="*Builder" name="WriteByte" />
+        <method importPath="github.com/spf13/cobra" receiver="*Command" name="Usage" />
+      </methods>
+    </inspection_tool>
+    <inspection_tool class="GoUnusedCallResult" enabled="true" level="WARNING" enabled_by_default="true">
+      <functions>
+        <function importPath="fmt" name="Sprintf" />
+        <function importPath="fmt" name="New" />
+        <function importPath="errors" name="Reverse" />
+        <function importPath="sort" name="Sprint" />
+      </functions>
+    </inspection_tool>
+  </profile>
+</component>
