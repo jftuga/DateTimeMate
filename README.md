@@ -101,7 +101,6 @@ Available Commands:
 Flags:
   -h, --help        help for dtmate
   -n, --nonewline   do not output a newline character
-  -t, --toggle      Help message for toggle
   -v, --version     version for dtmate
 
 Use "dtmate [command] --help" for more information about a command.
