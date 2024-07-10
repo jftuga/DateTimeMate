@@ -45,7 +45,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().BoolVarP(&optRootNoNewline, "nonewline", "n", false, "do not output a newline character")
 	versionTemplate := fmt.Sprintf("dtmate version %s\n%s\n", DateTimeMate.ModVersion, DateTimeMate.ModUrl)
 	rootCmd.SetVersionTemplate(versionTemplate)
