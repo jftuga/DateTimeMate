@@ -47,7 +47,7 @@ func (diff *Diff) String() string {
 }
 
 // CalculateDiff return the time difference and also set dt.Diff
-// first try to parse with carbon, fallback to parsing with now if carbon fails to parse
+// first try to parse with carbon, fallback to parsing with parsetime if carbon fails to parse
 func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 	var start, end time.Time
 

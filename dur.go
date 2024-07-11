@@ -32,7 +32,7 @@ type OptionsDur func(*Dur)
 const (
 	expanded  string = `(\d+)\s(years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
 	wordsOnly string = `\b[a-zA-Z]+\b`
-	dupMsg    string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
+	hintMsg   string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
 )
 
 var carbonFuncs = map[string]interface{}{
@@ -94,7 +94,6 @@ func DurWithOutputFormat(outputFormat string) OptionsDur {
 }
 
 func (dur *Dur) String() string {
-	//return fmt.Sprintf("From: %v Period:%v Op:%v Repeat:%v Until:%v OutputFormat:%v", dur.From, dur.Period, dur.Op, dur.Repeat, dur.Until, dur.OutputFormat)
 	return fmt.Sprintf("%v,%v,%v,%v,%v,%v", dur.From, dur.Period, dur.Op, dur.Repeat, dur.Until, dur.OutputFormat)
 }
 
@@ -106,6 +105,8 @@ func (dur *Dur) Sub() ([]string, error) {
 	return dur.addOrSub(Sub)
 }
 
+// addOrSub - calculates a date/time when given a starting date/time and a duration
+// also handle: the repeat and until options, relative dates, output formatting
 func (dur *Dur) addOrSub(op int) ([]string, error) {
 	if dur.Repeat > 0 && dur.Until != "" {
 		return nil, fmt.Errorf("repeat & until are mutually exclusive")
@@ -159,7 +160,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 				return nil, err
 			}
 
-			if Add == op { // FIXME
+			if Add == op {
 				if f.After(u) {
 					break
 				}
@@ -186,10 +187,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 	return all, nil
 }
 
-//func (dur *Period) Sub() (string, error) {
-//	return calculate(dur.From, dur.Period, Sub)
-//}
-
+// setOutputFormat use a strftime format string for the output date/time
 func (dur *Dur) setOutputFormat(arg string) (string, error) {
 	f, err := strftime.New(dur.OutputFormat)
 	if err != nil {
@@ -208,6 +206,8 @@ func (dur *Dur) setOutputFormat(arg string) (string, error) {
 	return output, nil
 }
 
+// calculate given a from date and period duration, compute a new date/time
+// when index==0, then add; when index==1, then subtract
 func calculate(from, period string, index int) (string, error) {
 	periodMatches := expandedRegexp.FindAllStringSubmatch(period, -1)
 	if len(periodMatches) == 0 {
@@ -348,14 +348,14 @@ func expandPeriod(period string) (string, error) {
 	// a numeric amount and a duration
 	words := strings.Fields(p)
 	if len(words)%2 == 1 {
-		return "", fmt.Errorf("[expandPeriod] Invalid period: %s. %s", period, dupMsg)
+		return "", fmt.Errorf("[expandPeriod] Invalid period: %s. %s", period, hintMsg)
 	}
 
 	// check that every other element is a number
 	for i := 0; i < len(words); i += 2 {
 		_, err := strconv.Atoi(words[i])
 		if err != nil {
-			return "", fmt.Errorf("[expandPeriod] %v. %s", err, dupMsg)
+			return "", fmt.Errorf("[expandPeriod] %v. %s", err, hintMsg)
 		}
 	}
 	return p, nil

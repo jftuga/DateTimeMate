@@ -38,7 +38,7 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * Command line tool: `go install github.com/jftuga/DateTimeMate/cmd/dtmate@latest`
 * * Binaries for all platforms are provided in the [releases](https://github.com/jftuga/DateTimeMate/releases) section.
 * Homebrew (MacOS / Linux):
-* * `brew tap jftuga/homebrew-tap; brew update; brew install jftuga/tap/DateTimeMate`
+* * `brew tap jftuga/homebrew-tap; brew update; brew install jftuga/tap/dtmate`
 
 ## Library Usage
 <details open>
