@@ -24,6 +24,12 @@ today (returns same value as now)
 yesterday (exactly 24 hours ahead of the current time)
 tomorrow (exactly 24 hours behind the current time)
 example: dtmate dur today 7h10m -a -u tomorrow
+
+Conversions:
+1 year is equal to 365.25 days
+Months are not a unit since their lengths vary between 28 and 31 days
+Separate sub-second brief units with a dot
+example: dtmate conv 4321s123456789ns hms.msusns
 `
 
 // rootCmd represents the base command when called without any subcommands

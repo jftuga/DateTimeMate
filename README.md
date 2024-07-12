@@ -32,6 +32,15 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * subtracting until a date is exceeded: `dtmate dur "12:00:00" 1h5m10s -u "09:48" -s`
 </details>
 
+<details>
+<summary>4. Convert from one group of date/time units to another</summary>
+
+* convert from seconds to weeks, days, hours, minutes, seconds: `dtmate conv 25771401s WDhms`
+* * 25771401 seconds
+* convert weeks, days, hours, minutes, seconds to just seconds: `dtmate conv 25771401s WDhms`
+* * 42 weeks 4 days 6 hours 43 minutes 21 seconds
+</details>
+
 ## Installation
 
 * Library: `go get -u github.com/jftuga/DateTimeMate`
@@ -53,7 +62,7 @@ import "github.com/jftuga/DateTimeMate"
 start := "2024-06-01"
 end := "2024-08-05 00:01:02"
 brief := true
-diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), 
+diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end),
 	DateTimeMate.DiffWithBrief(brief))
 result, duration, err := diff.CalculateDiff()
 if err != nil { ... }
@@ -70,13 +79,29 @@ from := "2024-06-01"
 d := "1 year 7 days 6 hours 5 minutes"
 until := "2027-06-22 18:15:11"
 ofmt := "%Y%m%d.%H%M%S"
-dur := DateTimeMate.NewDur(DateTimeMate.DurWithFrom(from), DateTimeMate.DurWithDur(d), 
+dur := DateTimeMate.NewDur(DateTimeMate.DurWithFrom(from), DateTimeMate.DurWithDur(d),
 	DateTimeMate.DurWithRepeat(0), DateTimeMate.DurWithUntil(until),
 	DateTimeMate.DurWithOutputFormat(ofmt))
 add, err := dur.Add()
 if err != nil { ... }
 fmt.Println(add) // [20250608.060500 20260615.121000 20270622.181500]
 ```
+</details>
+
+<details>
+<summary>Example 3 - convert date/time units</summary>
+
+```go
+source := "1367h29m13s"
+target := "Dhms" // days, hours, minutes, seconds
+conv := DateTimeMate.NewConv(
+DateTimeMate.ConvWithSource(source),
+DateTimeMate.ConvWithTarget(target))
+newDuration, err := conv.ConvertDuration()
+if err != nil { ... }
+fmt.Println("new duration:", newDuration) // 56 days 23 hours 29 minutes 13 seconds
+```
+
 </details>
 
 See also the [example](cmd/example/main.go) program.
@@ -231,6 +256,14 @@ $ dtmate diff today 2024-07-07 -b
 # set the output format
 $ dtmate dur "2024-07-01 12:00:00" 1W2D3h4m5s -a -f "%Y%m%d.%H%M%S"
 20240710.150405
+
+# convert from one group of date/time units to another
+$ dtmate conv 25771401s WDhms
+42 weeks 4 days 6 hours 43 minutes 21 seconds
+
+# another conversion, in the opposite direction, brief output
+$ dtmate conv 42W4D6h43m21s seconds -b
+25771401s
 ```
 </details>
 
