@@ -51,7 +51,7 @@ func (diff *Diff) String() string {
 func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 	var start, end time.Time
 
-	alpha := carbon.Parse(convertRelativeDateToActual(diff.Start))
+	alpha := carbon.Parse(ConvertRelativeDateToActual(diff.Start))
 	if alpha.Error != nil {
 		// fmt.Println("alpha:", alpha.Error)
 		p, err := parsetime.NewParseTime()
@@ -66,7 +66,7 @@ func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 		start = alpha.StdTime()
 	}
 
-	omega := carbon.Parse(convertRelativeDateToActual(diff.End))
+	omega := carbon.Parse(ConvertRelativeDateToActual(diff.End))
 	if omega.Error != nil {
 		// fmt.Println("omega:", omega.Error)
 		p, err := parsetime.NewParseTime()
