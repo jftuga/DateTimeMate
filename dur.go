@@ -277,38 +277,6 @@ func removeTrailingS(s string) string {
 	return s
 }
 
-// shrinkPeriod convert a period into a brief period
-// only allow one replacement per each period
-// Ex: 1 hour 2 minutes 3 seconds => 1h2m3s
-// FIXME: almost redundant code for plural & singular -- try to fix with strings.NewReplacer
-func shrinkPeriod(period string) string {
-	// plural
-	period = strings.Replace(period, "nanoseconds", "ns", 1)
-	period = strings.Replace(period, "microseconds", "us", 1)
-	period = strings.Replace(period, "milliseconds", "ms", 1)
-	period = strings.Replace(period, "seconds", "s", 1)
-	period = strings.Replace(period, "minutes", "m", 1)
-	period = strings.Replace(period, "hours", "h", 1)
-	period = strings.Replace(period, "days", "D", 1)
-	period = strings.Replace(period, "weeks", "W", 1)
-	period = strings.Replace(period, "months", "M", 1)
-	period = strings.Replace(period, "years", "Y", 1)
-
-	// singular
-	period = strings.Replace(period, "nanosecond", "ns", 1)
-	period = strings.Replace(period, "microsecond", "us", 1)
-	period = strings.Replace(period, "millisecond", "ms", 1)
-	period = strings.Replace(period, "second", "s", 1)
-	period = strings.Replace(period, "minute", "m", 1)
-	period = strings.Replace(period, "hour", "h", 1)
-	period = strings.Replace(period, "day", "D", 1)
-	period = strings.Replace(period, "week", "W", 1)
-	period = strings.Replace(period, "month", "M", 1)
-	period = strings.Replace(period, "year", "Y", 1)
-
-	return strings.ReplaceAll(period, " ", "")
-}
-
 // expandPeriod convert a brief style period into a long period
 // only allow one replacement per each period
 // Ex: 1h2m3s => 1 hour 2 minutes 3 seconds
@@ -353,7 +321,7 @@ func expandPeriod(period string) (string, error) {
 
 	// check that every other element is a number
 	for i := 0; i < len(words); i += 2 {
-		_, err := strconv.Atoi(words[i])
+		_, err := strconv.ParseFloat(words[i], 64)
 		if err != nil {
 			return "", fmt.Errorf("[expandPeriod] %v. %s", err, hintMsg)
 		}

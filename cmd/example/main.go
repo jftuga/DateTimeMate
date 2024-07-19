@@ -71,4 +71,17 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("Sub1: ", sub1)
+
+	fmt.Println("===================================================")
+	source := "1367h29m13s"
+	target := "Dhms" // days, hours, minutes, seconds
+	conv := DateTimeMate.NewConv(
+		DateTimeMate.ConvWithSource(source),
+		DateTimeMate.ConvWithTarget(target))
+	newDuration, err := conv.ConvertDuration()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	fmt.Println("new duration:", newDuration)
 }
