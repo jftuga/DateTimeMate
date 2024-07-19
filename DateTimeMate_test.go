@@ -22,3 +22,43 @@ func TestShrinkPeriod(t *testing.T) {
 		}
 	}
 }
+
+func testFormat(t *testing.T, source, outputFormat, correct string) {
+	t.Helper()
+	computed, err := Reformat(source, outputFormat)
+	if err != nil {
+		t.Error(err)
+	}
+	if computed != correct {
+		t.Errorf("[computed: %v] != [correct: %v]", computed, correct)
+	}
+}
+
+func TestFormatCommand(t *testing.T) {
+	source := "2024-07-22 08:21:44"
+	fmt := "%T %D"
+	correct := "08:21:44 07/22/24"
+	testFormat(t, source, fmt, correct)
+
+	fmt = "%v %r"
+	correct = "22-Jul-2024 08:21:44 AM"
+	testFormat(t, source, fmt, correct)
+
+	fmt = "%Y%m%d.%H%M%S"
+	correct = "20240722.082144"
+	testFormat(t, source, fmt, correct)
+
+	source = "2024-02-29T23:59:59Z"
+	fmt = "%Y%m%d.%H%M%S"
+	correct = "20240229.235959"
+	testFormat(t, source, fmt, correct)
+
+	fmt = "%Z"
+	correct = "UTC"
+	testFormat(t, source, fmt, correct)
+
+	source = "Mon Jul 22 08:40:33 EDT 2024"
+	fmt = "%Z %z"
+	correct = "EDT -0400"
+	testFormat(t, source, fmt, correct)
+}

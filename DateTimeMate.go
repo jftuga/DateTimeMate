@@ -2,6 +2,8 @@ package DateTimeMate
 
 import (
 	"github.com/golang-module/carbon/v2"
+	"github.com/lestrrat-go/strftime"
+	"github.com/tkuchiki/parsetime"
 	"strings"
 )
 
@@ -34,9 +36,9 @@ var abbrevMap = [][]string{
 	{"year", "Y"},
 }
 
-// convertRelativeDateToActual converts "yesterday", "today", "tomorrow"
+// ConvertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 // into actual dates; yesterday and tomorrow are -/+ 24 hours of current time
-func convertRelativeDateToActual(from string) string {
+func ConvertRelativeDateToActual(from string) string {
 	switch strings.ToLower(from) {
 	case "now":
 		return carbon.Now().String()
@@ -65,4 +67,24 @@ func shrinkPeriod(period string) string {
 // FIXME: This works for English only.
 func removeTrailingS(s string) string {
 	return strings.TrimSuffix(s, "s")
+}
+
+// Reformat the source string to match the strftime outputFormat
+// Ex: "2024-07-22 08:21:44", "%v %r" => "22-Jul-2024 08:21:44 AM"
+func Reformat(source string, outputFormat string) (string, error) {
+	source = ConvertRelativeDateToActual(source)
+	f, err := strftime.New(outputFormat)
+	if err != nil {
+		return "", err
+	}
+	p, err := parsetime.NewParseTime()
+	if err != nil {
+		return "", err
+	}
+	s, err := p.Parse(source)
+	if err != nil {
+		return "", err
+
+	}
+	return f.FormatString(s), nil
 }
