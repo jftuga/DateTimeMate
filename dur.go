@@ -134,7 +134,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 		var f, u time.Time
 		var err error
 
-		until := convertRelativeDateToActual(dur.Until)
+		until := ConvertRelativeDateToActual(dur.Until)
 		p, err := parsetime.NewParseTime()
 		if err != nil {
 			return nil, err
@@ -144,7 +144,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 			return nil, err
 		}
 
-		from := convertRelativeDateToActual(dur.From)
+		from := ConvertRelativeDateToActual(dur.From)
 		for {
 			from, err = calculate(from, dur.Period, op)
 			if err != nil {
@@ -222,7 +222,7 @@ func calculate(from, period string, index int) (string, error) {
 		}
 	}
 
-	from = convertRelativeDateToActual(from)
+	from = ConvertRelativeDateToActual(from)
 	p, err := parsetime.NewParseTime()
 	if err != nil {
 		return "", err

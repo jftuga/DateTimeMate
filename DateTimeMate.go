@@ -7,13 +7,13 @@ import (
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.1.0"
+	ModVersion string = "1.2.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
-// convertRelativeDateToActual converts "yesterday", "today", "tomorrow"
+// ConvertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 // into actual dates; yesterday and tomorrow are -/+ 24 hours of current time
-func convertRelativeDateToActual(from string) string {
+func ConvertRelativeDateToActual(from string) string {
 	switch strings.ToLower(from) {
 	case "now":
 		return carbon.Now().String()
