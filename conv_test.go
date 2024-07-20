@@ -3,6 +3,7 @@ package DateTimeMate
 import "testing"
 
 func testConv(t *testing.T, source, target string, brief bool, correct string) {
+	t.Helper()
 	conv := NewConv(
 		ConvWithSource(source),
 		ConvWithTarget(target),
