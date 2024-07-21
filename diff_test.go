@@ -3,6 +3,7 @@ package DateTimeMate
 import "testing"
 
 func testDiffStartEnd(t *testing.T, start, end string, brief bool, correct string) {
+	t.Helper()
 	diff := NewDiff(
 		DiffWithStart(start),
 		DiffWithEnd(end),

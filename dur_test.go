@@ -8,6 +8,7 @@ import (
 )
 
 func testDurAddSubContains(t *testing.T, from, period, correctAdd, correctSub string) {
+	t.Helper()
 	dur := NewDur(
 		DurWithFrom(from),
 		DurWithDur(period))
@@ -29,6 +30,7 @@ func testDurAddSubContains(t *testing.T, from, period, correctAdd, correctSub st
 }
 
 func testDurAddSubOutputFormat(t *testing.T, from, period, outputFormat, correctAdd, correctSub string) {
+	t.Helper()
 	dur := NewDur(
 		DurWithFrom(from),
 		DurWithDur(period),
@@ -40,7 +42,6 @@ func testDurAddSubOutputFormat(t *testing.T, from, period, outputFormat, correct
 	if !strings.Contains(future[0], correctAdd) {
 		t.Errorf("\n[from: %v]\n[period: %v]\n[computed: %v] does not contain:\n[correct: %v]", from, period, future[0], correctAdd)
 	}
-	return
 
 	past, err := dur.Sub()
 	if err != nil {
@@ -52,6 +53,7 @@ func testDurAddSubOutputFormat(t *testing.T, from, period, outputFormat, correct
 }
 
 func testDurAddSubWithRepeat(t *testing.T, from, period string, correctAdd, correctSub []string, repeat int) {
+	t.Helper()
 	dur := NewDur(
 		DurWithFrom(from),
 		DurWithDur(period),
@@ -78,6 +80,7 @@ func testDurAddSubWithRepeat(t *testing.T, from, period string, correctAdd, corr
 }
 
 func testDurAddUntil(t *testing.T, from, until, periodFuture string, correctAdd []string) {
+	t.Helper()
 	durFuture := NewDur(
 		DurWithFrom(from),
 		DurWithDur(periodFuture),
@@ -96,6 +99,7 @@ func testDurAddUntil(t *testing.T, from, until, periodFuture string, correctAdd 
 }
 
 func testDurSubUntil(t *testing.T, from, until, periodPast string, correctSub []string) {
+	t.Helper()
 	durPast := NewDur(
 		DurWithFrom(from),
 		DurWithDur(periodPast),

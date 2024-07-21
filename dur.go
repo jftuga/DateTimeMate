@@ -269,14 +269,6 @@ func validatePeriod(period string) error {
 	return nil
 }
 
-// removeTrailingS convert plural to singular, such as "hours" to "hour"
-func removeTrailingS(s string) string {
-	if len(s) > 0 && s[len(s)-1] == 's' {
-		return s[:len(s)-1]
-	}
-	return s
-}
-
 // expandPeriod convert a brief style period into a long period
 // only allow one replacement per each period
 // Ex: 1h2m3s => 1 hour 2 minutes 3 seconds

@@ -36,9 +36,9 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 <summary>4. Convert from one group of date/time units to another</summary>
 
 * convert from seconds to weeks, days, hours, minutes, seconds: `dtmate conv 25771401s WDhms`
-* * 25771401 seconds
-* convert weeks, days, hours, minutes, seconds to just seconds: `dtmate conv 25771401s WDhms`
 * * 42 weeks 4 days 6 hours 43 minutes 21 seconds
+* convert weeks, days, hours, minutes, seconds to just seconds, with brief output format: `dtmate conv "42 weeks 4 days 6 hours 43 minutes 21 seconds" seconds -b`
+* * 25771401s
 </details>
 
 ## Installation
