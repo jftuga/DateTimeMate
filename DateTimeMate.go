@@ -34,7 +34,6 @@ var abbrevMap = [][]string{
 	{"year", "Y"},
 }
 
-// convertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 // ConvertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 // into actual dates; yesterday and tomorrow are -/+ 24 hours of current time
 func ConvertRelativeDateToActual(from string) string {
