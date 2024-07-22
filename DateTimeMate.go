@@ -57,7 +57,7 @@ func shrinkPeriod(period string) string {
 	for _, tuple := range abbrevMap {
 		period = strings.Replace(period, tuple[0], tuple[1], 1)
 	}
-	
+
 	return strings.ReplaceAll(period, " ", "")
 }
 
