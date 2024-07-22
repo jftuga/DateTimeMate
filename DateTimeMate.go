@@ -11,6 +11,7 @@ const (
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
+// ConvertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 var abbrevMap = [][]string{
 	{"nanoseconds", "ns"},
 	{"microseconds", "us"},
@@ -53,10 +54,31 @@ func ConvertRelativeDateToActual(from string) string {
 // shrinkPeriod convert a period into a brief period
 // only allow one replacement per each period
 // Ex: 1 hour 2 minutes 3 seconds => 1h2m3s
+// FIXME: almost redundant code for plural & singular -- try to fix with strings.NewReplacer
 func shrinkPeriod(period string) string {
-	for _, tuple := range abbrevMap {
-		period = strings.Replace(period, tuple[0], tuple[1], 1)
-	}
+	// plural
+	period = strings.Replace(period, "nanoseconds", "ns", 1)
+	period = strings.Replace(period, "microseconds", "us", 1)
+	period = strings.Replace(period, "milliseconds", "ms", 1)
+	period = strings.Replace(period, "seconds", "s", 1)
+	period = strings.Replace(period, "minutes", "m", 1)
+	period = strings.Replace(period, "hours", "h", 1)
+	period = strings.Replace(period, "days", "D", 1)
+	period = strings.Replace(period, "weeks", "W", 1)
+	period = strings.Replace(period, "months", "M", 1)
+	period = strings.Replace(period, "years", "Y", 1)
+
+	// singular
+	period = strings.Replace(period, "nanosecond", "ns", 1)
+	period = strings.Replace(period, "microsecond", "us", 1)
+	period = strings.Replace(period, "millisecond", "ms", 1)
+	period = strings.Replace(period, "second", "s", 1)
+	period = strings.Replace(period, "minute", "m", 1)
+	period = strings.Replace(period, "hour", "h", 1)
+	period = strings.Replace(period, "day", "D", 1)
+	period = strings.Replace(period, "week", "W", 1)
+	period = strings.Replace(period, "month", "M", 1)
+	period = strings.Replace(period, "year", "Y", 1)
 
 	return strings.ReplaceAll(period, " ", "")
 }
