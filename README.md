@@ -44,7 +44,7 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 ## Installation
 
 * Library: `go get -u github.com/jftuga/DateTimeMate`
-* Command line tool: `go install github.com/jftuga/DateTimeMate/cmd/dtmate@latest`
+* Command line tool: `go install -ldflags="-s -w" github.com/jftuga/DateTimeMate/cmd/dtmate@latest`
 * * Binaries for all platforms are provided in the [releases](https://github.com/jftuga/DateTimeMate/releases) section.
 * Homebrew (MacOS / Linux):
 * * `brew tap jftuga/homebrew-tap; brew update; brew install jftuga/tap/dtmate`
@@ -116,29 +116,39 @@ See also the [example](cmd/example/main.go) program.
 dtmate: output the difference between date, time or duration
 
 Usage:
+  dtmate [flags]
   dtmate [command]
 
 Available Commands:
+  conv        Convert a duration from group of units to another
   diff        Output the difference between two date/times
   dur         Output a date/time when given a starting date/time and duration
   help        Help about any command
 
 Flags:
+  -e, --examples    show command-line examples
   -h, --help        help for dtmate
   -n, --nonewline   do not output a newline character
   -v, --version     version for dtmate
 
 Use "dtmate [command] --help" for more information about a command.
 
+---
+
 Durations:
 years months weeks days
 hours minutes seconds milliseconds microseconds nanoseconds
 example: '1 year 2 months 3 days 4 hours 1 minute 6 seconds'
 
-Brief Durations: (dates are always uppercase, times are always lowercase)
+---
+
+Brief Durations:
+(dates are always uppercase, times are always lowercase)
 Y    M    W    D
 h    m    s    ms    us    ns
 examples: 1Y2M3W4D5h6m7s8ms9us1ns, '1Y 2M 3W 4D 5h 6m 7s 8ms 9us 1ns'
+
+---
 
 Relative Date Shortcuts:
 now
@@ -146,6 +156,14 @@ today (returns same value as now)
 yesterday (exactly 24 hours ahead of the current time)
 tomorrow (exactly 24 hours behind the current time)
 example: dtmate dur today 7h10m -a -u tomorrow
+
+---
+
+Conversions:
+1 year is equal to 365.25 days
+Months are not a unit since their lengths vary between 28 and 31 days
+Separate sub-second brief units with a dot
+example: dtmate conv 4321s123456789ns hms.msusns
 ```
 
 </details>
@@ -163,6 +181,9 @@ example: dtmate dur today 7h10m -a -u tomorrow
 <summary>Show</summary>
 
 ```shell
+
+########################### "dtmate diff" examples ###########################
+
 # difference between two times on the same day
 $ dtmate diff 12:00:00 15:30:45
 3 hours 30 minutes 45 seconds
@@ -213,12 +234,18 @@ $ dtmate diff -i -n
 45 seconds%
 
 # same as above, include newline character
-$ echo 15:16:15,15:17 | dtmate -i
+$ echo 15:16:15,15:17 | dtmate diff -i
 45 seconds
 
 # read from STDIN with start on first line and end on second line
 $ printf "15:16:15\n15:17:20" | dtmate diff -i
 1 minute 5 seconds
+
+# use relative start date with brief output
+$ dtmate diff today 2024-07-07 -b
+3D16h38m47s
+
+########################### "dtmate dur" examples ###########################
 
 # add time
 # can also use "years", "months", "weeks", "days"
@@ -249,13 +276,11 @@ $ dtmate dur today 7h10m -u tomorrow -a
 2024-07-03 21:39:28 -0400 EDT
 2024-07-04 04:49:28 -0400 EDT
 
-# use relative start date with brief output
-$ dtmate diff today 2024-07-07 -b
-3D16h38m47s
-
 # set the output format
 $ dtmate dur "2024-07-01 12:00:00" 1W2D3h4m5s -a -f "%Y%m%d.%H%M%S"
 20240710.150405
+
+########################### "dtmate conv" examples ###########################
 
 # convert from one group of date/time units to another
 $ dtmate conv 25771401s WDhms

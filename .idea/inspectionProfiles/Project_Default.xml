@@ -26,6 +26,7 @@
         <method importPath="bytes" receiver="*Buffer" name="WriteRune" />
         <method importPath="strings" receiver="*Builder" name="WriteByte" />
         <method importPath="github.com/spf13/cobra" receiver="*Command" name="Usage" />
+        <method importPath="github.com/spf13/cobra" receiver="*Command" name="Help" />
       </methods>
     </inspection_tool>
     <inspection_tool class="GoUnusedCallResult" enabled="true" level="WARNING" enabled_by_default="true">
