@@ -11,7 +11,6 @@ const (
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
-// ConvertRelativeDateToActual converts "yesterday", "today", "tomorrow"
 var abbrevMap = [][]string{
 	{"nanoseconds", "ns"},
 	{"microseconds", "us"},
@@ -58,6 +57,7 @@ func shrinkPeriod(period string) string {
 	for _, tuple := range abbrevMap {
 		period = strings.Replace(period, tuple[0], tuple[1], 1)
 	}
+	return strings.ReplaceAll(period, " ", "")
 }
 
 // removeTrailingS convert plural to singular, such as "hours" to "hour"
