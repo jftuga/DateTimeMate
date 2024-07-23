@@ -41,6 +41,14 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * * 25771401s
 </details>
 
+<details>
+<summary>5. Reformat a date/time</summary>
+
+* convert the output of the `date` utility: `dtmate fmt "$(date)" "%F %T"`
+* * where `($date)` equals `Mon Jul 22 22:49:18 EDT 2024`
+* * output: 2024-07-22 22:49:18
+</details>
+
 ## Installation
 
 * Library: `go get -u github.com/jftuga/DateTimeMate`
@@ -289,6 +297,27 @@ $ dtmate conv 25771401s WDhms
 # another conversion, in the opposite direction, brief output
 $ dtmate conv 42W4D6h43m21s seconds -b
 25771401s
+
+########################### "dtmate fmt" examples ###########################
+
+# reformat date/times
+$ dtmate fmt "2024-07-22 08:21:44" "%T %D"
+08:21:44 07/22/24
+
+$ dtmate fmt "2024-07-22 08:21:44" "%v %r"
+22-Jul-2024 08:21:44 AM
+
+$ dtmate fmt "2024-07-22 08:21:44" "%Y%m%d.%H%M%S"
+20240722.082144
+
+$ dtmate fmt "2024-02-29T23:59:59Z" "%Y%m%d.%H%M%S"
+20240229.235959
+
+$ dtmate fmt "2024-02-29T23:59:59Z" "%Z"
+UTC
+
+$ dtmate fmt "Mon Jul 22 08:40:33 EDT 2024" "%Z %z"
+EDT -0400
 ```
 </details>
 
