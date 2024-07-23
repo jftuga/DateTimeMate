@@ -84,4 +84,15 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("new duration:", newDuration)
+
+	fmt.Println("===================================================")
+	source = "Mon Jul 22 08:40:33 EDT 2024"
+	outputFormat := "%F %T"
+
+	newFormat, err := DateTimeMate.Reformat(source, outputFormat)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	fmt.Println("new format:", newFormat)
 }
