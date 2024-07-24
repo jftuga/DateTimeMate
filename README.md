@@ -109,8 +109,20 @@ newDuration, err := conv.ConvertDuration()
 if err != nil { ... }
 fmt.Println("new duration:", newDuration) // 56 days 23 hours 29 minutes 13 seconds
 ```
-
 </details>
+
+<details>
+<summary>Example 4 - reformat a date/time</summary>
+
+```go
+source := "Mon Jul 22 08:40:33 EDT 2024"
+outputFormat := "%F %T"
+newFormat, err := DateTimeMate.Reformat(source, outputFormat)
+if err != nil { ... }
+fmt.Println("new format:", newFormat) // 2024-07-22 08:40:33
+```
+</details>
+
 
 See also the [example](cmd/example/main.go) program.
 
@@ -131,6 +143,7 @@ Available Commands:
   conv        Convert a duration from group of units to another
   diff        Output the difference between two date/times
   dur         Output a date/time when given a starting date/time and duration
+  fmt         reformat a date/time
   help        Help about any command
 
 Flags:
