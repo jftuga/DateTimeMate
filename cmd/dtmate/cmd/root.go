@@ -31,8 +31,8 @@ examples: 1Y2M3W4D5h6m7s8ms9us1ns, '1Y 2M 3W 4D 5h 6m 7s 8ms 9us 1ns'
 Relative Date Shortcuts:
 now
 today (returns same value as now)
-yesterday (exactly 24 hours ahead of the current time)
-tomorrow (exactly 24 hours behind the current time)
+yesterday (exactly 24 hours behind of the current time)
+tomorrow (exactly 24 hours ahead the current time)
 example: dtmate dur today 7h10m -a -u tomorrow
 
 ---
