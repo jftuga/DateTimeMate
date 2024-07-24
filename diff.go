@@ -43,7 +43,7 @@ func DiffWithBrief(brief bool) OptionsDiff {
 }
 
 func (diff *Diff) String() string {
-	return fmt.Sprintf("start:%v end:%v brief:%v", diff.Start, diff.End, diff.Brief)
+	return fmt.Sprintf("Start:%v End:%v Brief:%v", diff.Start, diff.End, diff.Brief)
 }
 
 // CalculateDiff return the time difference and also set dt.Diff

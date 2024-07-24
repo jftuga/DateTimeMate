@@ -94,7 +94,7 @@ func DurWithOutputFormat(outputFormat string) OptionsDur {
 }
 
 func (dur *Dur) String() string {
-	return fmt.Sprintf("%v,%v,%v,%v,%v,%v", dur.From, dur.Period, dur.Op, dur.Repeat, dur.Until, dur.OutputFormat)
+	return fmt.Sprintf("From:%v Period:%v Op:%v, Repeat:%v Until:%v OutputFormat:%v", dur.From, dur.Period, dur.Op, dur.Repeat, dur.Until, dur.OutputFormat)
 }
 
 func (dur *Dur) Add() ([]string, error) {
@@ -248,7 +248,6 @@ func calculate(from, period string, index int) (string, error) {
 			return "", err
 		}
 		word := periodMatches[i][2]
-		// to understand this line of code, read: ChatGPT_Explanation.md
 		to = carbonFuncs[removeTrailingS(word)].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, num)
 		// fmt.Printf("    to: %v | %v | %v\n", num, word, to)
 	}
