@@ -13,6 +13,11 @@ const (
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
+// this type of data structure is needed to preserve order as
+// replacement always needs to be performed in this order
+// otherwise you may get results such as:
+// 1h12m1s123millis456us788ns (millis instead of ms)
+// 123micros (micros instead of us)
 var abbrevMap = [][]string{
 	{"nanoseconds", "ns"},
 	{"microseconds", "us"},
@@ -64,7 +69,6 @@ func shrinkPeriod(period string) string {
 }
 
 // removeTrailingS convert plural to singular, such as "hours" to "hour"
-// FIXME: This works for English only.
 func removeTrailingS(s string) string {
 	return strings.TrimSuffix(s, "s")
 }

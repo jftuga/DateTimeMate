@@ -75,6 +75,10 @@ func ConvWithBrief(brief bool) OptionsConv {
 	}
 }
 
+func (conv *Conv) String() string {
+	return fmt.Sprintf("Source:%v Target:%v Brief:%v", conv.Source, conv.Target, conv.Brief)
+}
+
 // parseSource parses the Source field of the Conv struct
 // and converts it to a total number of seconds.
 //
@@ -156,7 +160,7 @@ func expandBriefSourceDuration(period string) (string, error) {
 	if len(periodMatches) == 0 {
 		return "", fmt.Errorf("[expandBriefSourceDuration] Invalid duration: %s", period)
 	}
-	return period, nil
+	return strings.TrimSpace(period), nil
 }
 
 // expandBriefTargetDuration give a brief duration, convert to long format
@@ -240,5 +244,5 @@ func (conv *Conv) ConvertDuration() (string, error) {
 	if conv.Brief {
 		result = shrinkPeriod(result)
 	}
-	return result, nil
+	return strings.TrimSpace(result), nil
 }

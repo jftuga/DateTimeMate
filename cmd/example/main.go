@@ -24,6 +24,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Println("diff:", diff)
 	fmt.Println("duration:", result, "=>", duration)
 	fmt.Println("===================================================")
 
@@ -70,6 +71,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Println("dur:", dur)
 	fmt.Println("Sub1: ", sub1)
 
 	fmt.Println("===================================================")
@@ -83,6 +85,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Println("conv:", conv)
 	fmt.Println("new duration:", newDuration)
 
 	fmt.Println("===================================================")
