@@ -1,7 +1,7 @@
 # DateTimeMate
 Golang package and CLI to compute the difference between date, time or duration
 
-The command-line program, `dtmate` *(along with the golang package)* allows you to answer three types of questions:
+The command-line program, `dtmate` *(along with the golang package)* allows you to answer these inquiries:
 
 <details open>
 <summary>1. What is the duration between two different dates and/or times?</summary>
@@ -194,7 +194,8 @@ example: dtmate conv 4321s123456789ns hms.msusns
 1. one line with start and end separated by a comma
 2. two lines with start on the first line and end on the second line
 
-**Note:** The `-n` switch along with `-R` will emit a comma-delimited output
+**Note:** The `-n` switch along with `-r` will emit a comma-delimited output
+* * Example: `dtmate dur now 1h -a -n -r 3`
 
 ## Command Line Examples
 
