@@ -1,7 +1,6 @@
 package DateTimeMate
 
 import (
-	"fmt"
 	"github.com/golang-module/carbon/v2"
 	"strings"
 	"testing"
@@ -116,6 +115,7 @@ func testDurSubUntil(t *testing.T, from, until, periodPast string, correctSub []
 }
 
 func TestDurHours(t *testing.T) {
+	t.Parallel()
 	from := "11:00AM"
 	period := "5 hours"
 	briefPeriod := "5h"
@@ -128,6 +128,7 @@ func TestDurHours(t *testing.T) {
 }
 
 func TestDurMillisecondsMicroseconds(t *testing.T) {
+	t.Parallel()
 	from := "2024-01-01 00:00:00"
 	period := "1 minute 2 seconds 123 milliseconds 456 microseconds"
 	briefPeriod := "1m2s123ms456us"
@@ -142,6 +143,7 @@ func TestDurMillisecondsMicroseconds(t *testing.T) {
 }
 
 func TestDurHoursMinutesSeconds(t *testing.T) {
+	t.Parallel()
 	from := "2024-01-01 00:00:00"
 	period := "5 hours 5 minutes 5 seconds"
 	briefPeriod := "5h5m5s"
@@ -154,6 +156,7 @@ func TestDurHoursMinutesSeconds(t *testing.T) {
 }
 
 func TestDurYearsMonthsDays(t *testing.T) {
+	t.Parallel()
 	from := "2000-01-01"
 	period := "5 years 2 months 10 days"
 	briefPeriod := "5Y2M10D"
@@ -166,6 +169,7 @@ func TestDurYearsMonthsDays(t *testing.T) {
 }
 
 func TestDurYearsMonthsDaysHoursMinutesSeconds(t *testing.T) {
+	t.Parallel()
 	from := "2024-01-01"
 	period := "13 years 8 months 28 days 16 hours 15 minutes 15 seconds"
 	briefPeriod := "13Y8M28D16h15m15s"
@@ -178,6 +182,7 @@ func TestDurYearsMonthsDaysHoursMinutesSeconds(t *testing.T) {
 }
 
 func TestDurWeeksDays(t *testing.T) {
+	t.Parallel()
 	from := "2024-01-01"
 	period := "10 weeks 2 days"
 	briefPeriod := "10W2D"
@@ -190,6 +195,7 @@ func TestDurWeeksDays(t *testing.T) {
 }
 
 func TestDurMonthsWeeksDays(t *testing.T) {
+	t.Parallel()
 	from := "2024-06-15"
 	period := "2 months 2 weeks 2 days"
 	briefPeriod := "2M2W2D"
@@ -202,6 +208,7 @@ func TestDurMonthsWeeksDays(t *testing.T) {
 }
 
 func TestDurYearsMonthsWeeksDays(t *testing.T) {
+	t.Parallel()
 	from := "2031-07-12"
 	period := "2 years 2 months 2 weeks 2 days"
 	briefPeriod := "2Y2M2W2D"
@@ -214,6 +221,7 @@ func TestDurYearsMonthsWeeksDays(t *testing.T) {
 }
 
 func TestDurNanoseconds(t *testing.T) {
+	t.Parallel()
 	from := "2031-07-11 05:00:00"
 	period := "987654321 nanoseconds"
 	briefPeriod := "987654321ns"
@@ -228,6 +236,7 @@ func TestDurNanoseconds(t *testing.T) {
 }
 
 func TestDurWithRepeat(t *testing.T) {
+	t.Parallel()
 	from := "2024-06-28T04:25:41Z"
 	period := "1M1W1h1m2s"
 	repeat := 3
@@ -237,6 +246,7 @@ func TestDurWithRepeat(t *testing.T) {
 }
 
 func TestDurAddUntil(t *testing.T) {
+	t.Parallel()
 	from := "2024-06-28T04:25:41Z"
 	period := "1M1W1h1m2s"
 	until := "2024-10-18 07:28:47"
@@ -245,6 +255,7 @@ func TestDurAddUntil(t *testing.T) {
 }
 
 func TestDurSubUntil(t *testing.T) {
+	t.Parallel()
 	from := "2024-10-18 07:28:47"
 	period := "1M1W1h1m2s"
 	until := "2024-05-28T04:25:41Z"
@@ -253,14 +264,15 @@ func TestDurSubUntil(t *testing.T) {
 }
 
 func TestDurRelativeUntil(t *testing.T) {
+	t.Parallel()
 	from := carbon.Now().StartOfDay().ToDateTimeString()
 	period := "7h59m1s"
 	until := "tomorrow"
 	allCorrectAdd := []string{"", "", "", "", ""}
-	allCorrectAdd[0] = fmt.Sprintf("%s", strings.Replace(from, "00:00:00", "07:59:01", 1))
-	allCorrectAdd[1] = fmt.Sprintf("%s", strings.Replace(from, "00:00:00", "15:58:02", 1))
-	allCorrectAdd[2] = fmt.Sprintf("%s", strings.Replace(from, "00:00:00", "23:57:03", 1))
-	allCorrectAdd[3] = fmt.Sprintf("%s", strings.Replace(from, "00:00:00", "07:56:04", 1))
-	allCorrectAdd[3] = fmt.Sprintf("%s", strings.Replace(allCorrectAdd[3], carbon.Now().ToDateString(), carbon.Tomorrow().ToDateString(), 1))
+	allCorrectAdd[0] = strings.Replace(from, "00:00:00", "07:59:01", 1)
+	allCorrectAdd[1] = strings.Replace(from, "00:00:00", "15:58:02", 1)
+	allCorrectAdd[2] = strings.Replace(from, "00:00:00", "23:57:03", 1)
+	allCorrectAdd[3] = strings.Replace(from, "00:00:00", "07:56:04", 1)
+	allCorrectAdd[3] = strings.Replace(allCorrectAdd[3], carbon.Now().ToDateString(), carbon.Tomorrow().ToDateString(), 1)
 	testDurAddUntil(t, from, until, period, allCorrectAdd)
 }

@@ -18,6 +18,7 @@ func testDiffStartEnd(t *testing.T, start, end string, brief bool, correct strin
 }
 
 func TestDiffTwoTimesSameDay(t *testing.T) {
+	t.Parallel()
 	start := "12:00:00"
 	end := "15:30:45"
 	correct := "3 hours 30 minutes 45 seconds"
@@ -27,6 +28,7 @@ func TestDiffTwoTimesSameDay(t *testing.T) {
 }
 
 func TestDiffAmPm(t *testing.T) {
+	t.Parallel()
 	start := "11:00AM"
 	end := "11:00PM"
 	correct := "12 hours"
@@ -36,6 +38,7 @@ func TestDiffAmPm(t *testing.T) {
 }
 
 func TestDiffIso8601(t *testing.T) {
+	t.Parallel()
 	start := "2024-06-07T08:00:00Z"
 	end := "2024-07-08T09:02:03Z"
 	correct := "4 weeks 3 days 1 hour 2 minutes 3 seconds"
@@ -45,6 +48,7 @@ func TestDiffIso8601(t *testing.T) {
 }
 
 func TestDiffTimeZoneOffset(t *testing.T) {
+	t.Parallel()
 	start := "2024-06-07T08:00:00Z"
 	end := "2024-06-07T08:05:05-05:00"
 	correct := "5 hours 5 minutes 5 seconds"
@@ -54,6 +58,7 @@ func TestDiffTimeZoneOffset(t *testing.T) {
 }
 
 func TestDiffIncludeSpaces(t *testing.T) {
+	t.Parallel()
 	start := "2024-06-07 08:01:02"
 	end := "2024-06-07 08:02"
 	correct := "58 seconds"
@@ -63,6 +68,7 @@ func TestDiffIncludeSpaces(t *testing.T) {
 }
 
 func TestDiffMicroSeconds(t *testing.T) {
+	t.Parallel()
 	start := "2024-06-07T08:00:00Z"
 	end := "2024-06-07T08:00:00.000123Z"
 	correct := "123 microseconds"
@@ -72,6 +78,7 @@ func TestDiffMicroSeconds(t *testing.T) {
 }
 
 func TestDiffMilliSeconds(t *testing.T) {
+	t.Parallel()
 	start := "2024-06-07T08:00:00Z"
 	end := "2024-06-07T08:01:02.345Z"
 	correct := "1 minute 2 seconds 345 milliseconds"
@@ -81,6 +88,7 @@ func TestDiffMilliSeconds(t *testing.T) {
 }
 
 func TestDiffRelativeStartEnd(t *testing.T) {
+	t.Parallel()
 	start := "yesterday"
 	end := "Today"
 	correct := "1 day"
