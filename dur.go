@@ -64,12 +64,6 @@ func DurWithFrom(from string) OptionsDur {
 	}
 }
 
-func DurWithOp(op int) OptionsDur {
-	return func(dur *Dur) {
-		dur.Op = op
-	}
-}
-
 func DurWithDur(d string) OptionsDur {
 	return func(dur *Dur) {
 		dur.Period = d

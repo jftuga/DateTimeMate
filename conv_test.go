@@ -19,6 +19,7 @@ func testConv(t *testing.T, source, target string, brief bool, correct string) {
 }
 
 func TestConvHoursMinutesSeconds(t *testing.T) {
+	t.Parallel()
 	source := "386 hours 24 minutes 36 seconds"
 	target := "days hours minutes seconds"
 	correct := "16 days 2 hours 24 minutes 36 seconds"
@@ -33,6 +34,7 @@ func TestConvHoursMinutesSeconds(t *testing.T) {
 }
 
 func TestConvSeconds(t *testing.T) {
+	t.Parallel()
 	source := "1198861 seconds"
 	target := "days hours minutes seconds"
 	correct := "13 days 21 hours 1 minute 1 second"
@@ -49,6 +51,7 @@ func TestConvSeconds(t *testing.T) {
 }
 
 func TestConvMinutes(t *testing.T) {
+	t.Parallel()
 	source := "15682 minutes 29 seconds"
 	target := "weeks days hours minutes seconds"
 	correct := "1 week 3 days 21 hours 22 minutes 29 seconds"
@@ -58,6 +61,7 @@ func TestConvMinutes(t *testing.T) {
 }
 
 func TestConvSingular(t *testing.T) {
+	t.Parallel()
 	source := "694801 seconds 1 millisecond 1 microsecond 1 nanosecond"
 	target := "weeks days hours minutes seconds milliseconds microseconds nanoseconds"
 	correct := "1 week 1 day 1 hour 1 second 1 millisecond 1 microsecond 1 nanosecond"
@@ -69,6 +73,7 @@ func TestConvSingular(t *testing.T) {
 }
 
 func TestConvMsUsNs(t *testing.T) {
+	t.Parallel()
 	source := "4321s123456789ns"
 	target := "hms.msusns"
 	correct := "1 hour 12 minutes 1 second 123 milliseconds 456 microseconds 788 nanoseconds"
@@ -84,6 +89,7 @@ func TestConvMsUsNs(t *testing.T) {
 }
 
 func TestConvNanoseconds1(t *testing.T) {
+	t.Parallel()
 	source := "1234567890987654321ns"
 	target := "YWDhms.msusns"
 	correct := "39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 447 nanoseconds"
@@ -93,6 +99,7 @@ func TestConvNanoseconds1(t *testing.T) {
 }
 
 func TestConvNanoseconds2(t *testing.T) {
+	t.Parallel()
 	source := "1234567890987654321ns"
 	target := "YWDhms.msusns"
 	correct := "39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 447 nanoseconds"

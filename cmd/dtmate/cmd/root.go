@@ -57,7 +57,7 @@ var rootCmd = &cobra.Command{
 
 		// if no arguments are provided and no flags are set, show help
 		if len(args) == 0 && !cmd.Flags().Changed("examples") {
-			cmd.Help()
+			cmd.Help() //nolint:errcheck
 		}
 	},
 }
