@@ -27,6 +27,18 @@ type Dur struct {
 	OutputFormat string
 }
 
+type MultiUnitDuration struct {
+	years   int64
+	weeks   int64
+	days    int64
+	hours   int64
+	minutes int64
+	seconds int64
+	millis  int64
+	micros  int64
+	nanos   int64
+}
+
 type OptionsDur func(*Dur)
 
 const (
@@ -92,11 +104,113 @@ func (dur *Dur) String() string {
 }
 
 func (dur *Dur) Add() ([]string, error) {
-	return dur.addOrSub(Add)
+	return dur.durAddOrSub(Add)
 }
 
 func (dur *Dur) Sub() ([]string, error) {
-	return dur.addOrSub(Sub)
+	return dur.durAddOrSub(Sub)
+}
+
+// durAddOrSub calculates the difference between two time durations
+func (dur *Dur) durAddOrSub(op int) ([]string, error) {
+	from, err := convertTextToDuration(dur.From)
+	if err != nil {
+		return nil, err
+	}
+	fromDuration := convertToDuration(from.years, from.weeks, from.days, from.hours, from.minutes, from.seconds, from.millis, from.micros, from.nanos)
+	println("fromDuration:", fromDuration)
+
+	period, err := convertTextToDuration(dur.Period)
+	if err != nil {
+		return nil, err
+	}
+	periodDuration := convertToDuration(period.years, period.weeks, period.days, period.hours, period.minutes, period.seconds, period.millis, period.micros, period.nanos)
+	println("periodDuration:", periodDuration)
+
+	var newDuration time.Duration
+	if op == 0 {
+		// add durations
+		newDuration = fromDuration + periodDuration
+	} else {
+		// subtract durations
+		newDuration = fromDuration - periodDuration
+	}
+	fmt.Println("newDuration:", newDuration, newDuration.Seconds())
+	units := []string{"years", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"}
+	result := formatTarget(newDuration.Seconds(), units)
+
+	println("result:", result)
+	return nil, nil
+}
+
+// convertTextToDuration parses a string representation of a duration and converts it
+// into a MultiUnitDuration struct. It supports both expanded and brief duration formats.
+//
+// The function first attempts to parse the input using an expanded format. If that fails,
+// it tries to expand a brief format into the expanded format before parsing again.
+//
+// The expanded format should be in the form of "X unit Y unit ...", where X and Y are
+// integer values and unit is a valid duration unit (e.g., "years", "weeks", "days").
+// The brief format is a more compact representation that gets expanded internally.
+//
+// Parameters:
+//   - period: string representation of the duration to be parsed
+//
+// Returns:
+//   - MultiUnitDuration: a struct containing the parsed duration components
+//   - error: nil if parsing was successful, otherwise contains an error message
+//
+// The function uses regular expressions to match duration components and supports
+// various time units including years, weeks, days, hours, minutes, seconds,
+// milliseconds, microseconds, and nanoseconds.
+//
+// If the input string is invalid or cannot be parsed, the function returns an error
+// describing the issue.
+//
+// Example usage:
+//   duration, err := convertTextToDuration("2 years 3 days 4 hours")
+//   if err != nil {
+//       log.Fatal(err)
+//   }
+//   fmt.Printf("Parsed duration: %+v\n", duration)
+func convertTextToDuration(period string) (MultiUnitDuration, error) {
+	periodMatches := expandedRegexp.FindAllStringSubmatch(period, -1)
+	if len(periodMatches) == 0 {
+		// brief format is being used so first expand it to the long format
+		period, err := expandPeriod(period)
+		if nil != err {
+			return MultiUnitDuration{}, fmt.Errorf("%v", err)
+		}
+		periodMatches = expandedRegexp.FindAllStringSubmatch(period, -1)
+		if len(periodMatches) == 0 {
+			return MultiUnitDuration{}, fmt.Errorf("[validatePeriod] Invalid duration: %s", period)
+		}
+	}
+	var durationResult MultiUnitDuration
+
+	for i := range periodMatches {
+		amount := periodMatches[i][1]
+		num, err := strconv.ParseInt(amount, 10, 64)
+		if err != nil {
+			return MultiUnitDuration{}, err
+		}
+		word := periodMatches[i][2]
+		// fmt.Printf("    to: %v | %v\n", num, word)
+		partialDuration := parseDurationString(word, num)
+
+		// Combine the partial duration with the durationResult
+		durationResult.years += partialDuration.years
+		durationResult.weeks += partialDuration.weeks
+		durationResult.days += partialDuration.days
+		durationResult.hours += partialDuration.hours
+		durationResult.minutes += partialDuration.minutes
+		durationResult.seconds += partialDuration.seconds
+		durationResult.millis += partialDuration.millis
+		durationResult.micros += partialDuration.micros
+		durationResult.nanos += partialDuration.nanos
+	}
+	fmt.Println(durationResult)
+	return durationResult, nil
 }
 
 // addOrSub - calculates a date/time when given a starting date/time and a duration
@@ -312,4 +426,103 @@ func expandPeriod(period string) (string, error) {
 		}
 	}
 	return p, nil
+}
+
+// convertToDuration converts a duration specified in years, weeks, days, hours,
+// minutes, seconds, milliseconds, microseconds, and nanoseconds to a time.Duration.
+//
+// The function assumes 365 days in a year and 7 days in a week. It does not
+// account for leap years or daylight saving time changes.
+//
+// Parameters:
+//   - years: number of years (int64)
+//   - weeks: number of weeks (int64)
+//   - days: number of days (int64)
+//   - hours: number of hours (int64)
+//   - minutes: number of minutes (int64)
+//   - seconds: number of seconds (int64)
+//   - milliseconds: number of milliseconds (int64)
+//   - microseconds: number of microseconds (int64)
+//   - nanoseconds: number of nanoseconds (int64)
+//
+// Returns:
+//   - time.Duration: the equivalent duration
+//
+// Note: This function uses int64 to support very large duration values.
+// However, the resulting time.Duration is still limited by its underlying
+// int64 nanosecond representation (approximately 290 years).
+func convertToDuration(years, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds int64) time.Duration {
+	// Convert everything to days
+	totalDays := years*365 + weeks*7 + days
+
+	// Convert days to hours and add the given hours
+	totalHours := totalDays*24 + hours
+
+	// Convert hours to minutes and add the given minutes
+	totalMinutes := totalHours*60 + minutes
+
+	// Convert minutes to seconds and add the given seconds
+	totalSeconds := totalMinutes*60 + seconds
+
+	// Convert to nanoseconds
+	totalNanos := totalSeconds*1e9 + milliseconds*1e6 + microseconds*1e3 + nanoseconds
+
+	// Convert to time.Duration
+	return time.Duration(totalNanos) * time.Nanosecond
+}
+
+// parseDurationString converts a string representation of a duration unit and a value
+// into a Duration struct with the appropriate field set.
+//
+// The function is case-insensitive and trims whitespace from the input string.
+// It recognizes various forms of duration units, including full names, abbreviations,
+// and common shorthand (e.g., "years", "year", "y" all map to years).
+//
+// Parameters:
+//   - durationStr: string representation of the duration unit (e.g., "hours", "minutes", "seconds")
+//   - value: int64 value to be assigned to the matching duration field
+//
+// Returns:
+//   - Duration: a struct with the appropriate field set based on the input
+//
+// The function recognizes the following units (case-insensitive):
+//   - Years: "years", "year", "y"
+//   - Weeks: "weeks", "week", "w"
+//   - Days: "days", "day", "d"
+//   - Hours: "hours", "hour", "h"
+//   - Minutes: "minutes", "minute", "min", "m"
+//   - Seconds: "seconds", "second", "sec", "s"
+//   - Milliseconds: "milliseconds", "millisecond", "millis", "ms"
+//   - Microseconds: "microseconds", "microsecond", "micros", "µs"
+//   - Nanoseconds: "nanoseconds", "nanosecond", "nanos", "ns"
+//
+// If an unknown duration unit is provided, the function will print an error message
+// and return an empty Duration struct.
+func parseDurationString(durationStr string, value int64) MultiUnitDuration {
+	var d MultiUnitDuration
+
+	switch strings.ToLower(strings.TrimSpace(durationStr)) {
+	case "years", "year", "y":
+		d.years = value
+	case "weeks", "week", "w":
+		d.weeks = value
+	case "days", "day", "d":
+		d.days = value
+	case "hours", "hour", "h":
+		d.hours = value
+	case "minutes", "minute", "min", "m":
+		d.minutes = value
+	case "seconds", "second", "sec", "s":
+		d.seconds = value
+	case "milliseconds", "millisecond", "millis", "ms":
+		d.millis = value
+	case "microseconds", "microsecond", "micros", "µs":
+		d.micros = value
+	case "nanoseconds", "nanosecond", "nanos", "ns":
+		d.nanos = value
+	default:
+		fmt.Printf("Unknown duration unit: %s\n", durationStr)
+	}
+
+	return d
 }
