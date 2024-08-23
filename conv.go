@@ -124,8 +124,10 @@ func (conv *Conv) parseSource() (float64, error) {
 // Returns:
 //   - string: A formatted string representing the duration using the specified units.
 //     For example: "2 hours 30 minutes 45 seconds"
-func (conv *Conv) formatTarget(seconds float64, units []string) string {
+func formatTarget(seconds float64, units []string) string {
 	result := ""
+	fmt.Println("seconds", seconds)
+	fmt.Println("units:", units)
 	for _, unit := range units {
 		unitInSeconds := unitMap[strings.TrimSuffix(unit, "s")]
 		value := seconds / unitInSeconds
@@ -240,7 +242,7 @@ func (conv *Conv) ConvertDuration() (string, error) {
 			}
 		}
 	}
-	result := conv.formatTarget(seconds, targetUnits)
+	result := formatTarget(seconds, targetUnits)
 	if conv.Brief {
 		result = shrinkPeriod(result)
 	}
