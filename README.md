@@ -222,9 +222,22 @@ $ dtmate diff "11:00AM" "11:00PM"
 $ dtmate diff 2024-06-07T08:00:00Z 2024-06-08T09:02:03Z
 1 day 1 hour 2 minutes 3 seconds
 
+# same input, also convert to seconds only, brief format
+$ dtmate diff 2024-06-07T08:00:00Z 2024-06-08T09:02:03Z --conv s -b
+90123s
+
 # using timezone offset
 $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00
 5 hours 5 minutes 5 seconds
+
+# same input, also convert duration to minutes and seconds
+$ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00 -c ms
+305 minutes 5 seconds
+
+# differentiate sub-second durations with a dot
+# note the "ms" on both sides of the dot: minutes & seconds vs milliseconds
+$ diff now "2020-01-01 11:12:13.123456789" -c ms.msusns
+-2566445 minutes 40 seconds 876 milliseconds 542 microseconds 985 nanoseconds
 
 # using a format which includes spaces
 $ dtmate diff "2024-06-07 08:01:02" "2024-06-07 08:02"
