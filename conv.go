@@ -218,8 +218,8 @@ func expandBriefTargetDuration(period string) ([]string, error) {
 func (conv *Conv) ConvertDuration() (string, error) {
 	var err error
 	isNegativeDuration := false
-	if conv.Source[0] == '-' {
-		conv.Source = conv.Source[1:]
+	if s, found := strings.CutPrefix(conv.Source, "-"); found {
+		conv.Source = s
 		isNegativeDuration = true
 	}
 	fields := strings.Fields(conv.Source)
