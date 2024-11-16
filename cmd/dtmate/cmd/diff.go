@@ -40,11 +40,13 @@ var diffCmd = &cobra.Command{
 
 var optDiffBrief bool
 var optDiffReadFromStdin bool
+var optDiffConv string
 
 func init() {
 	rootCmd.AddCommand(diffCmd)
 	diffCmd.Flags().BoolVarP(&optDiffBrief, "brief", "b", false, "output in brief format, such as: 1Y2M3D4h5m6s7ms8us9ns")
 	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read from STDIN instead of using -s/-e")
+	diffCmd.Flags().StringVarP(&optDiffConv, "conv", "c", "", "convert resulting duration to another group of units")
 }
 
 // either read one line containing a comma, then split start and end on this
@@ -66,6 +68,17 @@ func getInput() (string, string) {
 	return line, end
 }
 
+// convert duration from one group of units to another
+func convDuration(source, target string, brief bool) string {
+	conv := DateTimeMate.NewConv(DateTimeMate.ConvWithSource(source), DateTimeMate.ConvWithTarget(target), DateTimeMate.ConvWithBrief(brief))
+	result, err := conv.ConvertDuration()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return result
+}
+
 // outputDiff compute the duration between two dates, times, and/or date/times
 func outputDiff(start, end string, brief bool) {
 	diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), DateTimeMate.DiffWithBrief(brief))
@@ -73,6 +86,9 @@ func outputDiff(start, end string, brief bool) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if optDiffConv != "" {
+		result = convDuration(result, optDiffConv, optDiffBrief)
 	}
 	if optRootNoNewline {
 		fmt.Print(result)
