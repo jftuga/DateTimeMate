@@ -11,9 +11,10 @@ import (
 var optConvBrief bool
 
 var convCmd = &cobra.Command{
-	Use:   "conv [source duration] [target duration]",
-	Short: "Convert a duration from group of units to another",
-	Args:  cobra.MatchAll(cobra.ExactArgs(2)),
+	Use:                "conv [source duration] [target duration]",
+	Short:              "Convert a duration from group of units to another",
+	Args:               cobra.MatchAll(cobra.ExactArgs(2)),
+	DisableFlagParsing: true, // this allows for negative durations
 	Run: func(cmd *cobra.Command, args []string) {
 		outputConvDuration(args[0], args[1], optConvBrief)
 	},
