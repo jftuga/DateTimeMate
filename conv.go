@@ -217,6 +217,11 @@ func expandBriefTargetDuration(period string) ([]string, error) {
 //   - error: An error if any step of the conversion process fails.
 func (conv *Conv) ConvertDuration() (string, error) {
 	var err error
+	isNegativeDuration := false
+	if conv.Source[0] == '-' {
+		conv.Source = conv.Source[1:]
+		isNegativeDuration = true
+	}
 	fields := strings.Fields(conv.Source)
 	if len(fields) == 1 {
 		// brief format is being used so convert to long duration format
@@ -244,5 +249,9 @@ func (conv *Conv) ConvertDuration() (string, error) {
 	if conv.Brief {
 		result = shrinkPeriod(result)
 	}
-	return strings.TrimSpace(result), nil
+	result = strings.TrimSpace(result)
+	if isNegativeDuration {
+		result = "-" + result
+	}
+	return result, nil
 }
