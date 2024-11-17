@@ -61,4 +61,19 @@ func TestFormatCommand(t *testing.T) {
 	fmt = "%Z %z"
 	correct = "EDT -0400"
 	testFormat(t, source, fmt, correct)
+
+	source = "2024-11-16 14:01:02"
+	fmt = "%s"
+	correct = "1731783662"
+	testFormat(t, source, fmt, correct)
+
+	source = "1704085262"
+	fmt = "%F %T"
+	correct = "2024-01-01 00:01:02"
+	testFormat(t, source, fmt, correct)
+
+	source = "1704085262999"
+	fmt = "%F %T"
+	correct = "2024-01-01 00:01:02"
+	testFormat(t, source, fmt, correct)
 }

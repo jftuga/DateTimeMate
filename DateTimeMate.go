@@ -1,15 +1,19 @@
 package DateTimeMate
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/golang-module/carbon/v2"
 	"github.com/lestrrat-go/strftime"
 	"github.com/tkuchiki/parsetime"
-	"strings"
 )
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.3.0"
+	ModVersion string = "1.3.1"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -73,11 +77,43 @@ func removeTrailingS(s string) string {
 	return strings.TrimSuffix(s, "s")
 }
 
-// Reformat the source string to match the strftime outputFormat
-// Ex: "2024-07-22 08:21:44", "%v %r" => "22-Jul-2024 08:21:44 AM"
+// Reformat converts a date/time string into a specified format. The source can be:
+//   - A Unix timestamp (e.g., "1700265600")
+//   - A relative date (e.g., "yesterday", "now")
+//   - Any other date format parseable by parsetime
+//
+// The outputFormat parameter uses strftime format specifiers, with additional
+// support for Unix seconds via '%s'.
+//
+// Example usage:
+//
+//	s, err := Reformat("1700265600", "%Y-%m-%d")         // Unix timestamp to date
+//	s, err := Reformat("yesterday", "%Y-%m-%d %H:%M:%S") // Relative date to datetime
+//	s, err := Reformat("2024-01-01", "%s")               // Date to Unix timestamp
+//
+// Returns an error if:
+//   - The outputFormat is invalid
+//   - The source date cannot be parsed
+//   - The time parser initialization fails
 func Reformat(source string, outputFormat string) (string, error) {
-	source = ConvertRelativeDateToActual(source)
-	f, err := strftime.New(outputFormat)
+	source = strings.TrimSpace(source)
+	if isPureIntegerAtoi(source) {
+		if source[0] == '-' {
+			return "", fmt.Errorf("timestamps can't be negative: %v", source)
+		}
+		t, err := unixStringToTime(source)
+		if err != nil {
+			return "", err
+		}
+		source = t.String()
+	} else {
+		source = ConvertRelativeDateToActual(source)
+	}
+
+	// creates a new Strftime instance
+	// outputFormat is a pattern string that follows strftime formatting
+	// the additional formatting behavior allows this to also use the unix time %s modifier
+	f, err := strftime.New(outputFormat, strftime.WithUnixSeconds('s'))
 	if err != nil {
 		return "", err
 	}
@@ -91,4 +127,30 @@ func Reformat(source string, outputFormat string) (string, error) {
 
 	}
 	return f.FormatString(s), nil
+}
+
+// unixStringToTime converts a string containing a Unix timestamp to time.Time.
+// It accepts timestamps in both seconds (10 digits) and milliseconds (13 digits).
+// Returns the corresponding time.Time and any error encountered during conversion.
+//
+// If the input string is not a valid integer or is empty,
+// it returns a zero time.Time and an error.
+func unixStringToTime(timestamp string) (time.Time, error) {
+	unixTime, err := strconv.ParseInt(strings.TrimSpace(timestamp), 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if len(timestamp) == 13 {
+		return time.UnixMilli(unixTime), nil
+	}
+
+	return time.Unix(unixTime, 0), nil
+}
+
+// isPureIntegerAtoi reports whether a string contains a valid base-10 integer.
+// It returns true only if the string can be fully converted to an integer.
+func isPureIntegerAtoi(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
 }

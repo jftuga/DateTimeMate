@@ -345,6 +345,18 @@ UTC
 
 $ dtmate fmt "Mon Jul 22 08:40:33 EDT 2024" "%Z %z"
 EDT -0400
+
+# convert to unix (epoch) time seconds
+$ dtmate fmt "2024-11-16 14:01:02" "%s"
+1731783662
+
+# from unix (epoch) time seconds
+$ dtmate fmt 1704085262 "%F %T"
+2024-01-01 00:01:02
+
+# also from milliseconds
+$ dtmate fmt 1704085262999 "%F %T"
+2024-01-01 00:01:02
 ```
 </details>
 
