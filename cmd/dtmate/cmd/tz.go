@@ -9,7 +9,7 @@ import (
 )
 
 var tzCmd = &cobra.Command{
-	Use:   "tz [date/time] [target timezone]",
+	Use:   "tz [date/time] [target time zone]",
 	Short: "Convert a date/time from one time zone to another",
 	Args:  cobra.MatchAll(cobra.ExactArgs(2)),
 	Run: func(cmd *cobra.Command, args []string) {
