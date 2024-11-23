@@ -50,6 +50,8 @@ func LoadZoneDefinitions() map[string]int {
 		"ACDT":  37800, // Australian Central Daylight Time (UTC+10:30)
 		"AEDT":  39600, // Australian Eastern Daylight Time (UTC+11)
 		"ACWST": 31500, // Australian Central Western Standard Time (UTC+8:45)
+		"LHDT":  39600, // Lord Howe Daylight Time (UTC+11:00, unusual 30-minute DST advance)
+		"CAST":  34200, // Central Australia Standard Time (UTC+9:30, synonym for ACST)Antarctica/Casey
 
 		// New Zealand
 		"NZST":  43200, // New Zealand Standard Time (UTC+12)
