@@ -31,7 +31,6 @@ func LoadZoneDefinitions() map[string]int {
 		"EET":  7200,  // Eastern European Time (UTC+2)
 		"EEST": 10800, // Eastern European Summer Time (UTC+3)
 		"BST":  3600,  // British Summer Time (UTC+1)
-		"IRST": 3600,  // Irish Standard Time (UTC+1)
 
 		// Asia & Oceania
 		"IST":  19800, // India Standard Time (UTC+5:30)
@@ -42,17 +41,20 @@ func LoadZoneDefinitions() map[string]int {
 		"PHT":  28800, // Philippine Time (UTC+8)
 		"CNST": 28800, // China Standard Time (UTC+8)
 		"SST":  28800, // Singapore Standard Time (UTC+8)
+		"NPT":  20700, // Nepal Time (UTC+5:45)
 
 		// Australia
-		"AWST": 28800, // Australian Western Standard Time (UTC+8)
-		"ACST": 34200, // Australian Central Standard Time (UTC+9:30)
-		"AEST": 36000, // Australian Eastern Standard Time (UTC+10)
-		"ACDT": 37800, // Australian Central Daylight Time (UTC+10:30)
-		"AEDT": 39600, // Australian Eastern Daylight Time (UTC+11)
+		"AWST":  28800, // Australian Western Standard Time (UTC+8)
+		"ACST":  34200, // Australian Central Standard Time (UTC+9:30)
+		"AEST":  36000, // Australian Eastern Standard Time (UTC+10)
+		"ACDT":  37800, // Australian Central Daylight Time (UTC+10:30)
+		"AEDT":  39600, // Australian Eastern Daylight Time (UTC+11)
+		"ACWST": 31500, // Australian Central Western Standard Time (UTC+8:45)
 
 		// New Zealand
-		"NZST": 43200, // New Zealand Standard Time (UTC+12)
-		"NZDT": 46800, // New Zealand Daylight Time (UTC+13)
+		"NZST":  43200, // New Zealand Standard Time (UTC+12)
+		"NZDT":  46800, // New Zealand Daylight Time (UTC+13)
+		"CHAST": 45900, // Chatham Standard Time (UTC+12:45)
 
 		// South America
 		"ART":  -10800, // Argentina Time (UTC-3)
@@ -60,9 +62,11 @@ func LoadZoneDefinitions() map[string]int {
 		"BRST": -7200,  // Brasilia Summer Time (UTC-2)
 
 		// Middle East
-		"EAT": 10800, // East Africa Time (UTC+3)
-		"GST": 14400, // Gulf Standard Time (UTC+4)
-		"PKT": 18000, // Pakistan Standard Time (UTC+5)
+		"EAT":  10800, // East Africa Time (UTC+3)
+		"GST":  14400, // Gulf Standard Time (UTC+4)
+		"PKT":  18000, // Pakistan Standard Time (UTC+5)
+		"IRST": 12600, // Iran Standard Time (UTC+3:30)
+		"AFT":  16200, // Afghanistan Time (UTC+4:30)
 
 		// Military/NATO time zones
 		"Z": 0,      // Zulu Time (UTC)
@@ -95,5 +99,46 @@ func LoadZoneDefinitions() map[string]int {
 		"UTC": 0, // Coordinated Universal Time
 		"GMT": 0, // Greenwich Mean Time
 		"UT":  0, // Universal Time
+
+		// Additional IANA timezone entries
+		"ASIA/KOLKATA":                 19800,  // Indian Standard Time (UTC+5:30)
+		"ASIA/TEHRAN":                  12600,  // Iran Time (UTC+3:30)
+		"ASIA/KABUL":                   16200,  // Afghanistan Time (UTC+4:30)
+		"PACIFIC/CHATHAM":              45900,  // Chatham Island Time (UTC+12:45)
+		"AUSTRALIA/EUCLA":              31500,  // Central Western Standard Time (UTC+8:45)
+		"AMERICA/INDIANA/INDIANAPOLIS": -18000, // Eastern Standard Time (UTC-5)
+		"AUSTRALIA/LORD_HOWE":          37800,  // Lord Howe Standard Time (UTC+10:30)
+		"ANTARCTICA/CASEY":             39600,  // Casey Time (UTC+11)
+		"AMERICA/INDIANA/KNOX":         -21600, // Central Time (UTC-6)
+		"AMERICA/INDIANA/MARENGO":      -18000, // Eastern Time (UTC-5)
+		"AMERICA/INDIANA/PETERSBURG":   -18000, // Eastern Time (UTC-5)
+		"AMERICA/INDIANA/TELL_CITY":    -21600, // Central Time (UTC-6)
+		"AMERICA/INDIANA/VEVAY":        -18000, // Eastern Time (UTC-5)
+		"AMERICA/INDIANA/VINCENNES":    -18000, // Eastern Time (UTC-5)
+		"AMERICA/INDIANA/WINAMAC":      -18000, // Eastern Time (UTC-5)
+		"AMERICA/JUNEAU":               -32400, // Alaska Time (UTC-9)
+		"AMERICA/LOS_ANGELES":          -28800, // Pacific Time (UTC-8)
+		"AMERICA/NEW_YORK":             -18000, // Eastern Time (UTC-5)
+		"AMERICA/PHOENIX":              -25200, // Mountain Time - no DST (UTC-7)
+		"AMERICA/SHIPROCK":             -25200, // Mountain Time - no DST (UTC-7)
+		"ANTARCTICA/DAVIS":             25200,  // UTC+7
+		"ANTARCTICA/DUMONTDURVILLE":    36000,  // UTC+10
+		"ANTARCTICA/MCMURDO":           43200,  // UTC+12
+		"ANTARCTICA/SYOWA":             10800,  // UTC+3
+		"ANTARCTICA/TROLL":             0,      // UTC+0
+		"ASIA/JERUSALEM":               7200,   // Israel Time (UTC+2)
+		"ASIA/KATHMANDU":               20700,  // Nepal Time (UTC+5:45)
+		"ASIA/SHANGHAI":                28800,  // China Standard Time (UTC+8)
+		"ASIA/SINGAPORE":               28800,  // Singapore Time (UTC+8)
+		"ASIA/TOKYO":                   32400,  // Japan Standard Time (UTC+9)
+		"ASIA/YANGON":                  23400,  // Myanmar Time (UTC+6:30)
+		"AUSTRALIA/SYDNEY":             36000,  // Australian Eastern Standard Time (UTC+10)
+		"EUROPE/LONDON":                0,      // Western European Time (UTC+0)
+		"EUROPE/PARIS":                 3600,   // Central European Time (UTC+1)
+		"INDIAN/COCOS":                 23400,  // Cocos Islands Time (UTC+6:30)
+		"PACIFIC/AUCKLAND":             43200,  // New Zealand Standard Time (UTC+12)
+		"PACIFIC/KIRITIMATI":           50400,  // Line Islands Time (UTC+14)
+		"PACIFIC/MARQUESAS":            -34200, // Marquesas Time (UTC-9:30)
+		"PACIFIC/TONGATAPU":            46800,  // Tonga Time (UTC+13)
 	}
 }
