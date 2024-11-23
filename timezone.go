@@ -165,7 +165,7 @@ func (c *TimeZoneConverter) resolveLocation(zone string) (*time.Location, error)
 
 	// Try as offset
 	offset, err := parseOffset(zone)
-	if err != nil && !strings.Contains(err.Error(), "invalid offset format") {
+	if err != nil && !strings.Contains(err.Error(), "invalid") {
 		fmt.Println("xxx2 err:", err.Error())
 		return time.FixedZone(fmt.Sprintf("UTC%+d", offset/3600), offset), nil
 	}
