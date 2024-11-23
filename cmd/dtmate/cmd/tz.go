@@ -9,10 +9,9 @@ import (
 )
 
 var tzCmd = &cobra.Command{
-	Use:                "tz [source duration] [target duration]",
-	Short:              "Convert a duration from group of units to another",
-	Args:               cobra.MatchAll(cobra.ExactArgs(2)),
-	DisableFlagParsing: true, // this allows for negative durations
+	Use:   "tz [date/time] [target timezone]",
+	Short: "Convert a date/time from one time zone to another",
+	Args:  cobra.MatchAll(cobra.ExactArgs(2)),
 	Run: func(cmd *cobra.Command, args []string) {
 		outputTzConversion(args[0], args[1])
 	},
