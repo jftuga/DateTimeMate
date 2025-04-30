@@ -22,7 +22,7 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * Duration examples include:
 * * `5 minutes 5 seconds or 5m5s`
 * * `3 weeks 4 days 5 hours or 3W4D5h`
-* * `1 year 2 months 3 days 4 hours 5 minutes 6 second 7 milliseconds 8 microseconds 9 nanoseconds or 1Y2M3D4h5m6s7ms8us9ns`
+* * `1 year 3 days 4 hours 5 minutes 6 second 7 milliseconds 8 microseconds 9 nanoseconds or 1Y3D4h5m6s7ms8us9ns`
 </details>
 
 <details>

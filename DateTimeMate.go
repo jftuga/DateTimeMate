@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/golang-module/carbon/v2"
+	"github.com/jftuga/parsetime"
 	"github.com/lestrrat-go/strftime"
-	"github.com/tkuchiki/parsetime"
 )
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.3.1"
+	ModVersion string = "1.3.2"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -31,7 +31,6 @@ var abbrevMap = [][]string{
 	{"hours", "h"},
 	{"days", "D"},
 	{"weeks", "W"},
-	{"months", "M"},
 	{"years", "Y"},
 	{"nanosecond", "ns"},
 	{"microsecond", "us"},
@@ -41,7 +40,6 @@ var abbrevMap = [][]string{
 	{"hour", "h"},
 	{"day", "D"},
 	{"week", "W"},
-	{"month", "M"},
 	{"year", "Y"},
 }
 

@@ -14,17 +14,17 @@ const extendedHelp string = `
 ---
 
 Durations:
-years months weeks days
+years weeks days
 hours minutes seconds milliseconds microseconds nanoseconds
-example: '1 year 2 months 3 days 4 hours 1 minute 6 seconds'
+example: '1 year 3 days 4 hours 1 minute 6 seconds'
 
 ---
 
 Brief Durations:
 (dates are always uppercase, times are always lowercase)
-Y    M    W    D
+Y    W    D
 h    m    s    ms    us    ns
-examples: 1Y2M3W4D5h6m7s8ms9us1ns, '1Y 2M 3W 4D 5h 6m 7s 8ms 9us 1ns'
+examples: 1Y3W4D5h6m7s8ms9us1ns, '1Y 3W 4D 5h 6m 7s 8ms 9us 1ns'
 
 ---
 
