@@ -13,7 +13,7 @@ import (
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.3.1"
+	ModVersion string = "1.3.3"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
