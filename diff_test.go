@@ -87,6 +87,17 @@ func TestDiffMilliSeconds(t *testing.T) {
 	testDiffStartEnd(t, start, end, true, correctBrief)
 }
 
+func TestDiffYearOverflow(t *testing.T) {
+	t.Parallel()
+	diff := NewDiff(
+		DiffWithStart("0001-10-19"),
+		DiffWithEnd("2000-10-10"))
+	_, _, err := diff.CalculateDiff()
+	if err == nil {
+		t.Error("expected error for year difference exceeding 291 years")
+	}
+}
+
 func TestDiffRelativeStartEnd(t *testing.T) {
 	t.Parallel()
 	start := "yesterday"
