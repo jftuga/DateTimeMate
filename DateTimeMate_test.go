@@ -62,9 +62,14 @@ func TestFormatCommand(t *testing.T) {
 	correct = "EDT -0400"
 	testFormat(t, source, fmt, correct)
 
-	source = "2024-11-16 14:01:02"
+	source = "2024-11-16T14:01:02-05:00"
 	fmt = "%s"
 	correct = "1731783662"
+	testFormat(t, source, fmt, correct)
+
+	source = "2024-06-16T14:01:02-04:00"
+	fmt = "%s"
+	correct = "1718560862"
 	testFormat(t, source, fmt, correct)
 
 	source = "1704085262"
