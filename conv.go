@@ -95,21 +95,27 @@ func normalizeUnit(unit string) string {
 	return removeTrailingS(strings.ToLower(unit))
 }
 
-// parseSource parses the Source field of the Conv struct
-// and converts it to a total number of seconds.
+// parseDurationSeconds converts a duration string to a total number of seconds.
 //
-// The function expects the Source string to contain alternating numeric values and time unit strings
-// (e.g., "1 hour 30 minutes"). It supports various time units (defined in unitMap) in both singular
-// and plural forms.
-//
-// The function iterates through the Source string, parsing each numeric value and its corresponding
-// time unit. It then converts each time value to seconds and accumulates the total.
+// The source may be in long form ("1 hour 30 minutes") or brief form ("1h30m");
+// brief input is first expanded to long form. Long form must contain alternating
+// numeric values and time unit strings, with units (defined in unitMap) accepted
+// in both singular and plural forms.
 //
 // Returns:
 //   - float64: The total time converted to seconds.
-//   - error: An error if parsing fails, typically due to invalid numeric input.
-func (conv *Conv) parseSource() (float64, error) {
-	parts := strings.Fields(conv.Source)
+//   - error: An error if parsing fails, typically due to invalid numeric input
+//     or an unknown unit.
+func parseDurationSeconds(source string) (float64, error) {
+	if !isLongFormDuration(strings.Fields(source)) {
+		// brief format is being used so convert to long duration format
+		expandedSource, err := expandBriefSourceDuration(source)
+		if nil != err {
+			return 0, fmt.Errorf("invalid source duration %q: %v", source, err)
+		}
+		source = expandedSource
+	}
+	parts := strings.Fields(source)
 	var totalSeconds float64
 
 	for i := 0; i < len(parts); i += 2 {
@@ -118,7 +124,7 @@ func (conv *Conv) parseSource() (float64, error) {
 			return 0, err
 		}
 		if i+1 >= len(parts) {
-			return 0, fmt.Errorf("missing unit after %q in: %s", parts[i], conv.Source)
+			return 0, fmt.Errorf("missing unit after %q in: %s", parts[i], source)
 		}
 		unit := normalizeUnit(parts[i+1])
 		seconds, ok := unitMap[unit]
@@ -128,6 +134,34 @@ func (conv *Conv) parseSource() (float64, error) {
 		totalSeconds += value * seconds
 	}
 	return totalSeconds, nil
+}
+
+// resolveTargetUnits validates a target unit specification and expands it into
+// a list of long-form unit names. The target may be space-separated long-form
+// units ("hours minutes"), a single long-form unit, or a brief specification
+// ("hm" or "hms.msusns"). An empty or whitespace-only target and any unknown
+// unit produce an error.
+func resolveTargetUnits(target string) ([]string, error) {
+	targetUnits := strings.Fields(target)
+	if len(targetUnits) == 0 {
+		return nil, fmt.Errorf("no target units specified")
+	}
+	if len(targetUnits) == 1 {
+		if _, ok := unitMap[normalizeUnit(target)]; !ok {
+			// brief format is being used so convert to long duration format
+			var err error
+			targetUnits, err = expandBriefTargetDuration(target)
+			if nil != err {
+				return nil, err
+			}
+		}
+	}
+	for _, unit := range targetUnits {
+		if _, ok := unitMap[normalizeUnit(unit)]; !ok {
+			return nil, fmt.Errorf("unknown target unit: %q", unit)
+		}
+	}
+	return targetUnits, nil
 }
 
 // formatTarget converts a duration in seconds to a human-readable
@@ -272,7 +306,6 @@ func expandBriefTargetDuration(period string) ([]string, error) {
 //   - string: The converted duration in the specified target format.
 //   - error: An error if any step of the conversion process fails.
 func (conv *Conv) ConvertDuration() (string, error) {
-	var err error
 	if conv.Decimals < 0 || conv.Decimals > 9 {
 		return "", fmt.Errorf("decimals must be between 0 and 9: %d", conv.Decimals)
 	}
@@ -281,36 +314,13 @@ func (conv *Conv) ConvertDuration() (string, error) {
 		conv.Source = s
 		isNegativeDuration = true
 	}
-	if !isLongFormDuration(strings.Fields(conv.Source)) {
-		// brief format is being used so convert to long duration format
-		expandedSource, err := expandBriefSourceDuration(conv.Source)
-		if nil != err {
-			return "", fmt.Errorf("invalid source duration %q: %v", conv.Source, err)
-		}
-		conv.Source = expandedSource
-	}
-	seconds, err := conv.parseSource()
+	seconds, err := parseDurationSeconds(conv.Source)
 	if err != nil {
 		return "", err
 	}
-	targetUnits := strings.Fields(conv.Target)
-	if len(targetUnits) == 0 {
-		return "", fmt.Errorf("no target units specified")
-	}
-	if len(targetUnits) == 1 {
-		_, ok := unitMap[normalizeUnit(conv.Target)]
-		if !ok {
-			// brief format is being used so convert to long duration format
-			targetUnits, err = expandBriefTargetDuration(conv.Target)
-			if nil != err {
-				return "", err
-			}
-		}
-	}
-	for _, unit := range targetUnits {
-		if _, ok := unitMap[normalizeUnit(unit)]; !ok {
-			return "", fmt.Errorf("unknown target unit: %q", unit)
-		}
+	targetUnits, err := resolveTargetUnits(conv.Target)
+	if err != nil {
+		return "", err
 	}
 	result := conv.formatTarget(seconds, targetUnits)
 	if conv.Brief {

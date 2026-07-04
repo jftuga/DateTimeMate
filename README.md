@@ -42,7 +42,16 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 </details>
 
 <details>
-<summary>5. Reformat a date/time</summary>
+<summary>5. Add or subtract two durations, even when expressed in different units?</summary>
+
+* add: `dtmate durmath "1 hour 30 minutes" "45 minutes" -a`
+* * `2 hours 15 minutes`
+* subtract, with a signed result when the second duration is larger: `dtmate durmath "45 minutes" "1 hour" -s`
+* * `-15 minutes`
+</details>
+
+<details>
+<summary>6. Reformat a date/time</summary>
 
 * convert the output of the `date` utility: `dtmate fmt "$(date)" "%F %T"`
 * * where `($date)` equals `Mon Jul 22 22:49:18 EDT 2024`
@@ -123,6 +132,24 @@ fmt.Println("new format:", newFormat) // 2024-07-22 08:40:33
 ```
 </details>
 
+<details>
+<summary>Example 5 - duration arithmetic</summary>
+
+```go
+first := "1 hour 30 minutes"
+second := "45 minutes"
+dm := DateTimeMate.NewDurMath(
+	DateTimeMate.DurMathWithFirst(first),
+	DateTimeMate.DurMathWithSecond(second))
+sum, err := dm.Add()
+if err != nil { ... }
+fmt.Println(sum) // 2 hours 15 minutes
+difference, err := dm.Sub()
+if err != nil { ... }
+fmt.Println(difference) // 45 minutes
+```
+</details>
+
 
 See also the [example](cmd/example/main.go) program.
 
@@ -143,6 +170,7 @@ Available Commands:
   conv        Convert a duration from group of units to another
   diff        Output the difference between two date/times
   dur         Output a date/time when given a starting date/time and duration
+  durmath     Add or subtract two durations
   fmt         reformat a date/time
   help        Help about any command
 
@@ -329,6 +357,40 @@ $ dtmate dur 1700265600 "1 day" -a
 # combine with -f "%s" to also output unix time
 $ dtmate dur 1700265600 "1 day" -a -f "%s"
 1700352000
+
+########################### "dtmate durmath" examples ###########################
+
+# add two durations expressed in different units
+$ dtmate durmath "1 hour 30 minutes" "45 minutes" -a
+2 hours 15 minutes
+
+# subtract the second duration from the first
+$ dtmate durmath "1 hour 30 minutes" "45 minutes" -s
+45 minutes
+
+# brief input and output
+$ dtmate durmath 1h30m 45m -a -b
+2h15m
+
+# results are signed when the second duration is larger
+$ dtmate durmath "45 minutes" "1 hour" -s
+-15 minutes
+
+# mixed units between the two durations
+$ dtmate durmath "1 week" "3 days 12 hours" -s
+3 days 12 hours
+
+# convert the result to specific target units
+$ dtmate durmath "1 day" "90 minutes" -s -c minutes
+1350 minutes
+
+# show the smallest unit with decimal places, rounded
+$ dtmate durmath "1 hour" "30 minutes" -s -c hours -d 1
+0.5 hours
+
+# sub-second units appear only when the result needs them
+$ dtmate durmath "1.5 seconds" "250 milliseconds" -s
+1 second 250 milliseconds
 
 ########################### "dtmate conv" examples ###########################
 
