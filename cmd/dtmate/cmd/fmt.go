@@ -11,7 +11,9 @@ import (
 
 var fmtCmd = &cobra.Command{
 	Use:   "fmt [date/time] [format specifiers]",
-	Short: "reformat a date/time",
+	Short: "Reformat a date/time",
+	Example: `  dtmate fmt "2024-06-07 08:01:02" "%v %r"
+  dtmate fmt now %s`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if optFmtList {
 			return nil

@@ -15,6 +15,8 @@ import (
 var diffCmd = &cobra.Command{
 	Use:   "diff [start] [end]",
 	Short: "Output the difference between two date/times",
+	Example: `  dtmate diff 12:00:00 15:30:45
+  dtmate diff 2024-06-07T08:00:00Z 2024-06-08T09:02:03Z --conv s -b`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if optDiffReadFromStdin {
 			if len(args) == 0 {
@@ -45,7 +47,7 @@ var optDiffDecimals int
 
 func init() {
 	rootCmd.AddCommand(diffCmd)
-	diffCmd.Flags().BoolVarP(&optDiffBrief, "brief", "b", false, "output in brief format, such as: 1Y2M3D4h5m6s7ms8us9ns")
+	diffCmd.Flags().BoolVarP(&optDiffBrief, "brief", "b", false, "output in brief format, such as: 1Y3W4D5h6m7s")
 	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read from STDIN instead of using -s/-e")
 	diffCmd.Flags().StringVarP(&optDiffConv, "conv", "c", "", "convert resulting duration to another group of units")
 	diffCmd.Flags().IntVarP(&optDiffDecimals, "decimals", "d", 0, "with -c: show the smallest unit with this many decimal places, rounded")
