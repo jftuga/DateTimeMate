@@ -1,8 +1,8 @@
 // dur_test.go verifies the CLI-layer helpers for the 'dur' sub-command.
-// It covers negativeDurationHint, which turns the cryptic pflag "unknown
-// shorthand flag" error (produced when a user passes a negative-looking
-// duration such as -1h) into a clear message directing them to -s/--sub, while
-// leaving every other flag error untouched.
+// It covers the negativeDurationHint factory as registered for 'dur', which
+// turns the cryptic pflag "unknown shorthand flag" error (produced when a user
+// passes a negative-looking duration such as -1h) into a clear message
+// directing them to -s/--sub, while leaving every other flag error untouched.
 package cmd
 
 import (
@@ -25,9 +25,10 @@ func TestNegativeDurationHint(t *testing.T) {
 		{name: "unrelated error", err: errors.New("some other error"), rewrite: false},
 	}
 
+	hint := negativeDurationHint("dur", "Use -s/--sub to subtract, e.g.:\n  dtmate dur now 1h -s")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := negativeDurationHint(nil, tt.err)
+			got := hint(nil, tt.err)
 			if !tt.rewrite {
 				if got != tt.err {
 					t.Fatalf("expected error to pass through unchanged, got: %v", got)
