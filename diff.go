@@ -81,6 +81,11 @@ func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 		end = omega.StdTime()
 	}
 
+	yearDiff := end.Year() - start.Year()
+	if yearDiff > 291 || yearDiff < -291 {
+		return "", 0, fmt.Errorf("year difference of %d exceeds 291 year maximum", yearDiff)
+	}
+
 	duration := end.Sub(start)
 	parsed := durafmt.Parse(duration)
 	difference := fmt.Sprintf("%v", parsed)
