@@ -8,9 +8,10 @@ import (
 )
 
 type Diff struct {
-	Start string
-	End   string
-	Brief bool
+	Start    string
+	End      string
+	Brief    bool
+	Absolute bool
 }
 
 type OptionsDiff func(*Diff)
@@ -41,8 +42,16 @@ func DiffWithBrief(brief bool) OptionsDiff {
 	}
 }
 
+// DiffWithAbsolute makes CalculateDiff return an absolute (positive)
+// duration and formatted string regardless of argument order
+func DiffWithAbsolute(absolute bool) OptionsDiff {
+	return func(opt *Diff) {
+		opt.Absolute = absolute
+	}
+}
+
 func (diff *Diff) String() string {
-	return fmt.Sprintf("Start:%v End:%v Brief:%v", diff.Start, diff.End, diff.Brief)
+	return fmt.Sprintf("Start:%v End:%v Brief:%v Absolute:%v", diff.Start, diff.End, diff.Brief, diff.Absolute)
 }
 
 // parseDiffTime parses one side of a diff: 10-digit (seconds) and 13-digit
@@ -61,6 +70,7 @@ func parseDiffTime(source string) (time.Time, error) {
 
 // CalculateDiff return the time difference and also set dt.Diff
 // first try to parse with carbon, fallback to parsing with parsetime if carbon fails to parse
+// when Absolute is set, both the formatted string and the returned duration are non-negative
 func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 	start, err := parseDiffTime(diff.Start)
 	if err != nil {
@@ -77,6 +87,9 @@ func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 	}
 
 	duration := end.Sub(start)
+	if diff.Absolute {
+		duration = duration.Abs()
+	}
 	parsed := durafmt.Parse(duration)
 	difference := fmt.Sprintf("%v", parsed)
 	if diff.Brief {

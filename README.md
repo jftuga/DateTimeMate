@@ -48,6 +48,8 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * * `2 hours 15 minutes`
 * subtract, with a signed result when the second duration is larger: `dtmate durmath "45 minutes" "1 hour" -s`
 * * `-15 minutes`
+* same input, always absolute with the `-A` option: `dtmate durmath "45 minutes" "1 hour" -s -A`
+* * `15 minutes`
 </details>
 
 <details>
@@ -290,6 +292,14 @@ $ dtmate diff "$(date)" 2020
 $ dtmate diff "$(date)" 2020 -b
 -4Y24W1D7h21m53s
 
+# ending time first yields a signed result
+$ dtmate diff 15:30:45 12:00:00
+-3 hours 30 minutes 45 seconds
+
+# same input, always output an absolute (positive) duration
+$ dtmate diff 15:30:45 12:00:00 -A
+3 hours 30 minutes 45 seconds
+
 # using microsecond formatting
 $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:00:00.000123Z
 123 microseconds
@@ -375,6 +385,10 @@ $ dtmate durmath 1h30m 45m -a -b
 # results are signed when the second duration is larger
 $ dtmate durmath "45 minutes" "1 hour" -s
 -15 minutes
+
+# same input, always output an absolute (positive) duration
+$ dtmate durmath "45 minutes" "1 hour" -s -A
+15 minutes
 
 # mixed units between the two durations
 $ dtmate durmath "1 week" "3 days 12 hours" -s

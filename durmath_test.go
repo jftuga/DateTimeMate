@@ -1,7 +1,7 @@
 // durmath_test.go verifies the DurMath duration arithmetic API: adding and
-// subtracting durations across mixed units, signed results, target-unit
-// conversion, decimals, brief output, and rejection of invalid or negative
-// inputs.
+// subtracting durations across mixed units, signed results, absolute results,
+// target-unit conversion, decimals, brief output, and rejection of invalid or
+// negative inputs.
 package DateTimeMate
 
 import (
@@ -9,12 +9,13 @@ import (
 	"testing"
 )
 
-func testDurMath(t *testing.T, first, second string, brief bool, correctAdd, correctSub string) {
+func testDurMath(t *testing.T, first, second string, brief, absolute bool, correctAdd, correctSub string) {
 	t.Helper()
 	dm := NewDurMath(
 		DurMathWithFirst(first),
 		DurMathWithSecond(second),
-		DurMathWithBrief(brief))
+		DurMathWithBrief(brief),
+		DurMathWithAbsolute(absolute))
 
 	result, err := dm.Add()
 	if err != nil {
@@ -33,14 +34,15 @@ func testDurMath(t *testing.T, first, second string, brief bool, correctAdd, cor
 	}
 }
 
-func testDurMathConv(t *testing.T, first, second, target string, brief bool, decimals int, correctAdd, correctSub string) {
+func testDurMathConv(t *testing.T, first, second, target string, brief bool, decimals int, absolute bool, correctAdd, correctSub string) {
 	t.Helper()
 	dm := NewDurMath(
 		DurMathWithFirst(first),
 		DurMathWithSecond(second),
 		DurMathWithTarget(target),
 		DurMathWithBrief(brief),
-		DurMathWithDecimals(decimals))
+		DurMathWithDecimals(decimals),
+		DurMathWithAbsolute(absolute))
 
 	result, err := dm.Add()
 	if err != nil {
@@ -61,58 +63,84 @@ func testDurMathConv(t *testing.T, first, second, target string, brief bool, dec
 
 func TestDurMathHoursMinutes(t *testing.T) {
 	t.Parallel()
-	testDurMath(t, "1 hour 30 minutes", "45 minutes", false, "2 hours 15 minutes", "45 minutes")
-	testDurMath(t, "1h30m", "45m", false, "2 hours 15 minutes", "45 minutes")
-	testDurMath(t, "1h30m", "45m", true, "2h15m", "45m")
+	testDurMath(t, "1 hour 30 minutes", "45 minutes", false, false, "2 hours 15 minutes", "45 minutes")
+	testDurMath(t, "1h30m", "45m", false, false, "2 hours 15 minutes", "45 minutes")
+	testDurMath(t, "1h30m", "45m", true, false, "2h15m", "45m")
 }
 
 func TestDurMathSignedResult(t *testing.T) {
 	t.Parallel()
 	// subtraction is signed when the second duration is larger
-	testDurMath(t, "45 minutes", "1 hour", false, "1 hour 45 minutes", "-15 minutes")
-	testDurMath(t, "45 minutes", "1 hour", true, "1h45m", "-15m")
+	testDurMath(t, "45 minutes", "1 hour", false, false, "1 hour 45 minutes", "-15 minutes")
+	testDurMath(t, "45 minutes", "1 hour", true, false, "1h45m", "-15m")
+	// the sign also survives target-unit conversion
+	testDurMathConv(t, "90 minutes", "1 day", "minutes", false, 0, false, "1530 minutes", "-1350 minutes")
+}
+
+func TestDurMathAbsoluteResult(t *testing.T) {
+	t.Parallel()
+	// Absolute renders a negative result without the leading "-"
+	testDurMath(t, "45 minutes", "1 hour", false, true, "1 hour 45 minutes", "15 minutes")
+	testDurMath(t, "45 minutes", "1 hour", true, true, "1h45m", "15m")
+	// Absolute is a no-op on positive results
+	testDurMath(t, "1 hour 30 minutes", "45 minutes", false, true, "2 hours 15 minutes", "45 minutes")
+	// Absolute composes with target units and decimals
+	testDurMathConv(t, "90 minutes", "1 day", "minutes", false, 0, true, "1530 minutes", "1350 minutes")
+	testDurMathConv(t, "30 minutes", "1 hour", "hours", false, 1, true, "1.5 hours", "0.5 hours")
+	// a zero result still renders as "0 seconds", never "-0 seconds"
+	testDurMath(t, "1 hour", "60 minutes", false, true, "2 hours", "0 seconds")
+	testDurMath(t, "1 hour", "60 minutes", true, true, "2h", "0s")
+
+	// negative inputs are still rejected when Absolute is set
+	dm := NewDurMath(
+		DurMathWithFirst("1 year -30 days"),
+		DurMathWithSecond("1 hour"),
+		DurMathWithAbsolute(true))
+	if _, err := dm.Sub(); !errors.Is(err, ErrNegativeDuration) {
+		t.Errorf("expected ErrNegativeDuration with Absolute set, got: %v", err)
+	}
 }
 
 func TestDurMathMixedUnits(t *testing.T) {
 	t.Parallel()
-	testDurMath(t, "1 week", "3 days 12 hours", false, "1 week 3 days 12 hours", "3 days 12 hours")
-	testDurMath(t, "1 day", "90 minutes", false, "1 day 1 hour 30 minutes", "22 hours 30 minutes")
+	testDurMath(t, "1 week", "3 days 12 hours", false, false, "1 week 3 days 12 hours", "3 days 12 hours")
+	testDurMath(t, "1 day", "90 minutes", false, false, "1 day 1 hour 30 minutes", "22 hours 30 minutes")
 }
 
 func TestDurMathCaseInsensitiveUnits(t *testing.T) {
 	t.Parallel()
 	// long-form units are case-insensitive, singular or plural
-	testDurMath(t, "1 HOUR 30 Minutes", "45 MINUTES", false, "2 hours 15 minutes", "45 minutes")
+	testDurMath(t, "1 HOUR 30 Minutes", "45 MINUTES", false, false, "2 hours 15 minutes", "45 minutes")
 }
 
 func TestDurMathTargetUnits(t *testing.T) {
 	t.Parallel()
-	testDurMathConv(t, "1 day", "90 minutes", "minutes", false, 0, "1530 minutes", "1350 minutes")
+	testDurMathConv(t, "1 day", "90 minutes", "minutes", false, 0, false, "1530 minutes", "1350 minutes")
 	// brief target specification
-	testDurMathConv(t, "1 day", "90 minutes", "hm", false, 0, "25 hours 30 minutes", "22 hours 30 minutes")
-	testDurMathConv(t, "1 day", "90 minutes", "hm", true, 0, "25h30m", "22h30m")
+	testDurMathConv(t, "1 day", "90 minutes", "hm", false, 0, false, "25 hours 30 minutes", "22 hours 30 minutes")
+	testDurMathConv(t, "1 day", "90 minutes", "hm", true, 0, false, "25h30m", "22h30m")
 }
 
 func TestDurMathDecimals(t *testing.T) {
 	t.Parallel()
-	testDurMathConv(t, "1 hour", "30 minutes", "hours", false, 1, "1.5 hours", "0.5 hours")
-	testDurMathConv(t, "1 hour", "30 minutes", "hours", false, 2, "1.50 hours", "0.50 hours")
+	testDurMathConv(t, "1 hour", "30 minutes", "hours", false, 1, false, "1.5 hours", "0.5 hours")
+	testDurMathConv(t, "1 hour", "30 minutes", "hours", false, 2, false, "1.50 hours", "0.50 hours")
 }
 
 func TestDurMathSubSecond(t *testing.T) {
 	t.Parallel()
 	// sub-second units appear only when the result has a sub-second remainder
-	testDurMath(t, "1.5 seconds", "250 milliseconds", false, "1 second 750 milliseconds", "1 second 250 milliseconds")
-	testDurMath(t, "1 second", "500 milliseconds", false, "1 second 500 milliseconds", "500 milliseconds")
+	testDurMath(t, "1.5 seconds", "250 milliseconds", false, false, "1 second 750 milliseconds", "1 second 250 milliseconds")
+	testDurMath(t, "1 second", "500 milliseconds", false, false, "1 second 500 milliseconds", "500 milliseconds")
 	// whole-second results stay at second granularity
-	testDurMath(t, "750 milliseconds", "250 milliseconds", false, "1 second", "500 milliseconds")
+	testDurMath(t, "750 milliseconds", "250 milliseconds", false, false, "1 second", "500 milliseconds")
 }
 
 func TestDurMathZeroResult(t *testing.T) {
 	t.Parallel()
 	// a zero result renders as seconds, not nanoseconds
-	testDurMath(t, "1 hour", "60 minutes", false, "2 hours", "0 seconds")
-	testDurMath(t, "1 hour", "60 minutes", true, "2h", "0s")
+	testDurMath(t, "1 hour", "60 minutes", false, false, "2 hours", "0 seconds")
+	testDurMath(t, "1 hour", "60 minutes", true, false, "2h", "0s")
 }
 
 func TestDurMathInvalidInput(t *testing.T) {

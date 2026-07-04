@@ -17,6 +17,46 @@ func testDiffStartEnd(t *testing.T, start, end string, brief bool, correct strin
 	}
 }
 
+// testDiffAbsolute mirrors testDiffStartEnd but also exercises the Absolute
+// option and asserts the sign of the returned time.Duration
+func testDiffAbsolute(t *testing.T, start, end string, brief, absolute bool, correct string, wantNegative bool) {
+	t.Helper()
+	diff := NewDiff(
+		DiffWithStart(start),
+		DiffWithEnd(end),
+		DiffWithBrief(brief),
+		DiffWithAbsolute(absolute))
+	result, duration, err := diff.CalculateDiff()
+	if err != nil {
+		t.Error(err)
+	}
+	if result != correct {
+		t.Errorf("[computed: %v] != [correct: %v]", result, correct)
+	}
+	if wantNegative && duration >= 0 {
+		t.Errorf("expected a negative duration, got: %v", duration)
+	}
+	if !wantNegative && duration < 0 {
+		t.Errorf("expected a non-negative duration, got: %v", duration)
+	}
+}
+
+func TestDiffSignedResult(t *testing.T) {
+	t.Parallel()
+	// the difference is signed when the start is later than the end
+	testDiffAbsolute(t, "15:30:45", "12:00:00", false, false, "-3 hours 30 minutes 45 seconds", true)
+	testDiffAbsolute(t, "15:30:45", "12:00:00", true, false, "-3h30m45s", true)
+}
+
+func TestDiffAbsoluteResult(t *testing.T) {
+	t.Parallel()
+	// Absolute makes both the formatted string and the returned duration positive
+	testDiffAbsolute(t, "15:30:45", "12:00:00", false, true, "3 hours 30 minutes 45 seconds", false)
+	testDiffAbsolute(t, "15:30:45", "12:00:00", true, true, "3h30m45s", false)
+	// Absolute is a no-op when the result is already positive
+	testDiffAbsolute(t, "12:00:00", "15:30:45", false, true, "3 hours 30 minutes 45 seconds", false)
+}
+
 func TestDiffTwoTimesSameDay(t *testing.T) {
 	t.Parallel()
 	start := "12:00:00"

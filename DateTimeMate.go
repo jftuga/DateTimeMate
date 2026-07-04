@@ -21,7 +21,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.9.0"
+	ModVersion string = "1.10.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
