@@ -3,8 +3,8 @@ package DateTimeMate
 import (
 	"fmt"
 	"github.com/golang-module/carbon/v2"
-	"github.com/lestrrat-go/strftime"
 	"github.com/jftuga/parsetime"
+	"github.com/lestrrat-go/strftime"
 	"os"
 	"regexp"
 	"strconv"
