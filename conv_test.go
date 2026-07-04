@@ -101,6 +101,10 @@ func TestConvInvalidInput(t *testing.T) {
 		{"1 fortnight", "hours"},        // unknown source unit (used to output nothing)
 		{"90 minutes", "hours bananas"}, // unknown target unit (used to divide by zero)
 		{"90 minutes", "fortnights"},    // unknown single target unit
+		{"1 month", "days"},             // months are deliberately unsupported; lengths vary
+		{"", "hours"},                   // empty source
+		{"abc days", "hours"},           // invalid numeric amount
+		{"15", "hours"},                 // bare number with no unit
 	}
 	for _, c := range cases {
 		conv := NewConv(ConvWithSource(c.source), ConvWithTarget(c.target))
@@ -108,6 +112,34 @@ func TestConvInvalidInput(t *testing.T) {
 			t.Errorf("expected an error for source %q target %q, got nil", c.source, c.target)
 		}
 	}
+}
+
+func TestConvEmptyTarget(t *testing.T) {
+	t.Parallel()
+	// an empty or whitespace-only target used to panic with an
+	// index-out-of-range error instead of returning an error
+	for _, target := range []string{"", "   "} {
+		conv := NewConv(ConvWithSource("90 minutes"), ConvWithTarget(target))
+		if _, err := conv.ConvertDuration(); err == nil {
+			t.Errorf("expected an error for empty target %q, got nil", target)
+		}
+	}
+}
+
+func TestConvCaseInsensitiveUnits(t *testing.T) {
+	t.Parallel()
+	// long-form units are case-insensitive; uppercase plurals such as
+	// "DAYS" used to fail because the trailing "S" was not stripped
+	testConv(t, "1 DAYS", "hours", false, "24 hours")
+	testConv(t, "1 Week 2 DAYS", "days", false, "9 days")
+	testConv(t, "1 DaY 2 houRS", "hours", false, "26 hours")
+	testConv(t, "90 minutes", "HOURS", false, "1 hour")
+}
+
+func TestConvMixedSignSource(t *testing.T) {
+	t.Parallel()
+	// a negative amount mid-string subtracts from the total
+	testConv(t, "1 year -30 days", "days", false, "335 days")
 }
 
 func TestConvZeroResult(t *testing.T) {
