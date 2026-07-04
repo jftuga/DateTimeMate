@@ -322,6 +322,14 @@ $ dtmate dur today 7h10m -u tomorrow -a
 $ dtmate dur "2024-07-01 12:00:00" 1W2D3h4m5s -a -f "%Y%m%d.%H%M%S"
 20240710.150405
 
+# unix (epoch) timestamps are accepted: 10 digits for seconds, 13 for milliseconds
+$ dtmate dur 1700265600 "1 day" -a
+2023-11-18 19:00:00 -0500 EST
+
+# combine with -f "%s" to also output unix time
+$ dtmate dur 1700265600 "1 day" -a -f "%s"
+1700352000
+
 ########################### "dtmate conv" examples ###########################
 
 # convert from one group of date/time units to another

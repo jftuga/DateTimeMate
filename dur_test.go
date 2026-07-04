@@ -115,6 +115,50 @@ func testDurSubUntil(t *testing.T, from, until, periodPast string, correctSub []
 	}
 }
 
+func TestDurUnixTimestampFrom(t *testing.T) {
+	t.Parallel()
+	// a 10-digit integer from-value is a Unix timestamp in seconds; it used
+	// to be silently misparsed by parsetime as a time-of-day on the current
+	// date; "%s" output keeps the assertions timezone-independent
+	testDurAddSubOutputFormat(t, "1700265600", "1 day", "%s", "1700352000", "1700179200")
+	// a 13-digit integer is a Unix timestamp in milliseconds
+	testDurAddSubOutputFormat(t, "1700265600123", "1 day", "%s", "1700352000", "1700179200")
+}
+
+func TestDurAmbiguousTimestamp(t *testing.T) {
+	t.Parallel()
+	// 11 and 12 digit integers are neither seconds (10) nor milliseconds (13)
+	// and previously fell through to parsetime where they were misparsed
+	for _, from := range []string{"17002656001", "170026560012"} {
+		dur := NewDur(DurWithFrom(from), DurWithDur("1 day"))
+		if _, err := dur.Add(); err == nil {
+			t.Errorf("expected an error for ambiguous timestamp %q, got nil", from)
+		}
+	}
+}
+
+func TestDurUnixTimestampUntil(t *testing.T) {
+	t.Parallel()
+	dur := NewDur(
+		DurWithFrom("1700265600"),
+		DurWithDur("1 day"),
+		DurWithUntil("1700438400"),
+		DurWithOutputFormat("%s"))
+	future, err := dur.Add()
+	if err != nil {
+		t.Fatal(err)
+	}
+	correct := []string{"1700352000", "1700438400"}
+	if len(future) != len(correct) {
+		t.Fatalf("[computed: %v] != [correct: %v]", future, correct)
+	}
+	for i := range correct {
+		if future[i] != correct[i] {
+			t.Errorf("[computed: %v] != [correct: %v]", future[i], correct[i])
+		}
+	}
+}
+
 func TestDurFractionalPeriod(t *testing.T) {
 	t.Parallel()
 	from := "2024-01-01 00:00:00"

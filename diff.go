@@ -49,7 +49,7 @@ func (diff *Diff) String() string {
 // (milliseconds) integers are treated as Unix timestamps; anything else is
 // parsed with carbon first, falling back to parsetime if carbon fails
 func parseDiffTime(source string) (time.Time, error) {
-	if isPureIntegerAtoi(source) && (len(source) == 10 || len(source) == 13) {
+	if isUnixTimestamp(source) {
 		return unixStringToTime(source)
 	}
 	converted := ConvertRelativeDateToActual(source)
