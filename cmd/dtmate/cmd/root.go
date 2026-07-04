@@ -1,8 +1,6 @@
-//go:generate cp -f ../../../README.md .
 package cmd
 
 import (
-	"embed"
 	"fmt"
 	DateTimeMate "github.com/jftuga/DateTimeMate"
 	"github.com/spf13/cobra"
@@ -66,9 +64,6 @@ var optRootNoNewline bool
 var optRootShowExamples bool
 var readmeExamplesRegex = regexp.MustCompile(`(?ms)## Command Line Examples.*?shell\n(.*?)` + "```")
 
-//go:embed README.md
-var readmeFS embed.FS
-
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -97,10 +92,5 @@ func extractReadmeExamples(markdown string) string {
 }
 
 func ShowExamples() {
-	readmeContent, err := readmeFS.ReadFile("README.md")
-	if err != nil {
-		fmt.Println("Error reading README:", err)
-		return
-	}
-	fmt.Println(extractReadmeExamples(string(readmeContent)))
+	fmt.Println(extractReadmeExamples(DateTimeMate.ReadmeMd))
 }

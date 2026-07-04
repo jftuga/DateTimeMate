@@ -1,6 +1,7 @@
 package DateTimeMate
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +11,13 @@ import (
 	"github.com/jftuga/parsetime"
 	"github.com/lestrrat-go/strftime"
 )
+
+// ReadmeMd is the project README, embedded here (next to the file at the
+// module root) because go:embed cannot reference parent directories from
+// the cmd package; the CLI extracts its -e examples from it.
+//
+//go:embed README.md
+var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
