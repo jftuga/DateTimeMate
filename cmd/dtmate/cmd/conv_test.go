@@ -13,6 +13,7 @@ func TestParseConvArgs(t *testing.T) {
 		brief      bool
 		noNewline  bool
 		help       bool
+		decimals   int
 		wantErr    bool
 	}{
 		{name: "no flags", args: []string{"90m", "h"}, positional: []string{"90m", "h"}},
@@ -29,6 +30,18 @@ func TestParseConvArgs(t *testing.T) {
 		{name: "negative verbose duration", args: []string{"-1 hour 30 minutes", "m"}, positional: []string{"-1 hour 30 minutes", "m"}},
 		{name: "negative duration with flag", args: []string{"-b", "-90m", "h"}, positional: []string{"-90m", "h"}, brief: true},
 		{name: "double dash terminator", args: []string{"-b", "--", "-90m", "h"}, positional: []string{"-90m", "h"}, brief: true},
+		{name: "decimals separate", args: []string{"-d", "2", "90m", "h"}, positional: []string{"90m", "h"}, decimals: 2},
+		{name: "decimals attached", args: []string{"-d2", "90m", "h"}, positional: []string{"90m", "h"}, decimals: 2},
+		{name: "decimals in cluster", args: []string{"-bd2", "90m", "h"}, positional: []string{"90m", "h"}, brief: true, decimals: 2},
+		{name: "decimals in cluster separate value", args: []string{"-bd", "3", "90m", "h"}, positional: []string{"90m", "h"}, brief: true, decimals: 3},
+		{name: "decimals long", args: []string{"--decimals", "2", "90m", "h"}, positional: []string{"90m", "h"}, decimals: 2},
+		{name: "decimals long equals", args: []string{"--decimals=4", "90m", "h"}, positional: []string{"90m", "h"}, decimals: 4},
+		{name: "decimals after positionals", args: []string{"90m", "h", "-d", "2"}, positional: []string{"90m", "h"}, decimals: 2},
+		{name: "decimals with negative duration", args: []string{"-d", "2", "-90m", "h"}, positional: []string{"-90m", "h"}, decimals: 2},
+		{name: "decimals missing value", args: []string{"90m", "h", "-d"}, wantErr: true},
+		{name: "decimals missing value long", args: []string{"90m", "h", "--decimals"}, wantErr: true},
+		{name: "decimals bad value", args: []string{"-d", "x", "90m", "h"}, wantErr: true},
+		{name: "decimals bad value long equals", args: []string{"--decimals=x", "90m", "h"}, wantErr: true},
 		{name: "unknown shorthand", args: []string{"-x", "90m", "h"}, wantErr: true},
 		{name: "unknown shorthand in cluster", args: []string{"-bx", "90m", "h"}, wantErr: true},
 		{name: "unknown long flag", args: []string{"--bogus", "90m", "h"}, wantErr: true},
@@ -36,7 +49,7 @@ func TestParseConvArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			positional, brief, noNewline, help, err := parseConvArgs(tt.args)
+			positional, brief, noNewline, help, decimals, err := parseConvArgs(tt.args)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected an error, got nil")
@@ -57,6 +70,9 @@ func TestParseConvArgs(t *testing.T) {
 			}
 			if help != tt.help {
 				t.Errorf("help: [computed: %v] != [correct: %v]", help, tt.help)
+			}
+			if decimals != tt.decimals {
+				t.Errorf("decimals: [computed: %v] != [correct: %v]", decimals, tt.decimals)
 			}
 		})
 	}

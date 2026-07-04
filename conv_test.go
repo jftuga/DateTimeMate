@@ -18,6 +18,82 @@ func testConv(t *testing.T, source, target string, brief bool, correct string) {
 	}
 }
 
+func testConvDecimals(t *testing.T, source, target string, brief bool, decimals int, correct string) {
+	t.Helper()
+	conv := NewConv(
+		ConvWithSource(source),
+		ConvWithTarget(target),
+		ConvWithBrief(brief),
+		ConvWithDecimals(decimals))
+
+	result, err := conv.ConvertDuration()
+	if err != nil {
+		t.Error(err)
+	}
+	if result != correct {
+		t.Errorf("\n[computed: %v] !=\n[correct : %v]", result, correct)
+	}
+}
+
+func TestConvDecimals(t *testing.T) {
+	t.Parallel()
+	// the example from issue #31
+	source := "2 years 37 weeks 2 days"
+	target := "years"
+	correct := "2.71 years"
+	testConvDecimals(t, source, target, false, 2, correct)
+
+	correct = "2.71Y"
+	testConvDecimals(t, source, target, true, 2, correct)
+
+	source = "-2 years 37 weeks 2 days"
+	correct = "-2.71 years"
+	testConvDecimals(t, source, target, false, 2, correct)
+
+	// decimals only apply to the last (smallest) unit
+	source = "2 years 37 weeks 2 days"
+	target = "years weeks"
+	correct = "2 years 37.29 weeks"
+	testConvDecimals(t, source, target, false, 2, correct)
+
+	source = "1 hour 30 minutes"
+	target = "hours"
+	correct = "1.5 hours"
+	testConvDecimals(t, source, target, false, 1, correct)
+
+	// a value rounding to exactly one is singular
+	source = "365 days 6 hours"
+	target = "years"
+	correct = "1.00 year"
+	testConvDecimals(t, source, target, false, 2, correct)
+
+	// the last unit is included even when less than one
+	source = "3 days"
+	target = "years"
+	correct = "0.01 years"
+	testConvDecimals(t, source, target, false, 2, correct)
+
+	// zero decimals preserves the default truncation behavior
+	source = "2 years 37 weeks 2 days"
+	target = "years"
+	correct = "2 years"
+	testConvDecimals(t, source, target, false, 0, correct)
+}
+
+func TestConvDecimalsOutOfRange(t *testing.T) {
+	t.Parallel()
+	for _, decimals := range []int{-1, 10} {
+		conv := NewConv(
+			ConvWithSource("90 minutes"),
+			ConvWithTarget("hours"),
+			ConvWithDecimals(decimals))
+		_, err := conv.ConvertDuration()
+		if err == nil {
+			t.Errorf("expected an error for decimals=%d, got nil", decimals)
+		}
+	}
+}
+
 func TestConvHoursMinutesSeconds(t *testing.T) {
 	t.Parallel()
 	source := "386 hours 24 minutes 36 seconds"

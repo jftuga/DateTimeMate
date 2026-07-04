@@ -40,6 +40,8 @@ Conversions:
 Months are not a unit since their lengths vary between 28 and 31 days
 Separate sub-second brief units with a dot
 example: dtmate conv 4321s123456789ns hms.msusns
+Use -d to show the smallest unit with decimal places, rounded
+example: dtmate diff 2023-10-17 2026-07-04 -c Y -d 2  =>  2.71 years
 `
 
 // rootCmd represents the base command when called without any subcommands
