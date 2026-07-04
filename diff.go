@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/golang-module/carbon/v2"
 	"github.com/hako/durafmt"
-	"github.com/tkuchiki/parsetime"
+	"github.com/jftuga/parsetime"
 	"time"
 )
 

@@ -22,7 +22,7 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * Duration examples include:
 * * `5 minutes 5 seconds or 5m5s`
 * * `3 weeks 4 days 5 hours or 3W4D5h`
-* * `1 year 2 months 3 days 4 hours 5 minutes 6 second 7 milliseconds 8 microseconds 9 nanoseconds or 1Y2M3D4h5m6s7ms8us9ns`
+* * `1 year 3 days 4 hours 5 minutes 6 seconds 7 milliseconds 8 microseconds 9 nanoseconds or 1Y3D4h5m6s7ms8us9ns`
 </details>
 
 <details>
@@ -157,17 +157,17 @@ Use "dtmate [command] --help" for more information about a command.
 ---
 
 Durations:
-years months weeks days
+years weeks days
 hours minutes seconds milliseconds microseconds nanoseconds
-example: '1 year 2 months 3 days 4 hours 1 minute 6 seconds'
+example: '1 year 3 days 4 hours 1 minute 6 seconds'
 
 ---
 
 Brief Durations:
 (dates are always uppercase, times are always lowercase)
-Y    M    W    D
+Y    W    D
 h    m    s    ms    us    ns
-examples: 1Y2M3W4D5h6m7s8ms9us1ns, '1Y 2M 3W 4D 5h 6m 7s 8ms 9us 1ns'
+examples: 1Y3W4D5h6m7s8ms9us1ns, '1Y 3W 4D 5h 6m 7s 8ms 9us 1ns'
 
 ---
 
@@ -283,7 +283,7 @@ $ dtmate diff today 2024-07-07 -b
 ########################### "dtmate dur" examples ###########################
 
 # add time
-# can also use "years", "months", "weeks", "days"
+# can also use "years", "weeks", "days"
 $ dtmate dur 2024-01-01 "1 hour 30 minutes 45 seconds" -a
 2024-01-01 01:30:45 -0500 EST
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/golang-module/carbon/v2"
 	"github.com/lestrrat-go/strftime"
-	"github.com/tkuchiki/parsetime"
+	"github.com/jftuga/parsetime"
 	"os"
 	"regexp"
 	"strconv"
@@ -30,14 +30,13 @@ type Dur struct {
 type OptionsDur func(*Dur)
 
 const (
-	expanded  string = `(\d+)\s(years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
+	expanded  string = `(\d+)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
 	wordsOnly string = `\b[a-zA-Z]+\b`
 	hintMsg   string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
 )
 
 var carbonFuncs = map[string]interface{}{
 	"year":        [2]interface{}{carbon.Carbon.AddYears, carbon.Carbon.SubYears},
-	"month":       [2]interface{}{carbon.Carbon.AddMonths, carbon.Carbon.SubMonths},
 	"week":        [2]interface{}{carbon.Carbon.AddWeeks, carbon.Carbon.SubWeeks},
 	"day":         [2]interface{}{carbon.Carbon.AddDays, carbon.Carbon.SubDays},
 	"hour":        [2]interface{}{carbon.Carbon.AddHours, carbon.Carbon.SubHours},
@@ -279,7 +278,7 @@ func expandPeriod(period string) (string, error) {
 	s = strings.Replace(s, "h", "ζ", 1)
 	s = strings.Replace(s, "D", "η", 1)
 	s = strings.Replace(s, "W", "θ", 1)
-	s = strings.Replace(s, "M", "ι", 1)
+	// Month (M) not supported
 	s = strings.Replace(s, "Y", "λ", 1)
 
 	// now convert from the unique string back to the corresponding duration
@@ -292,7 +291,7 @@ func expandPeriod(period string) (string, error) {
 	p = strings.Replace(p, "ζ", " hours ", 1)
 	p = strings.Replace(p, "η", " days ", 1)
 	p = strings.Replace(p, "θ", " weeks ", 1)
-	p = strings.Replace(p, "ι", " months ", 1)
+	// Month (M) not supported
 	p = strings.Replace(p, "λ", " years ", 1)
 
 	// ensure each time & period was successfully replaced
