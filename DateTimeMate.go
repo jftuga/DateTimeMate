@@ -21,7 +21,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.8.2"
+	ModVersion string = "1.8.3"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -182,4 +182,25 @@ func unixStringToTime(timestamp string) (time.Time, error) {
 func isPureIntegerAtoi(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
+}
+
+// isUnixTimestamp reports whether a string should be treated as a Unix
+// timestamp: a pure integer of 10 to 13 characters; 10 characters are
+// seconds and 13 are milliseconds, while ambiguous 11 and 12 character
+// values are rejected with an error by unixStringToTime instead of falling
+// through to the date/time parser; other lengths are excluded so values
+// such as "2024" or a 14-digit compact date/time like "20240101080102"
+// are still parsed as date/times
+func isUnixTimestamp(s string) bool {
+	return isPureIntegerAtoi(s) && len(s) >= 10 && len(s) <= 13
+}
+
+// parseDateTimeOrUnix parses a date/time string, treating 10-digit (seconds)
+// and 13-digit (milliseconds) integers as Unix timestamps; anything else is
+// converted from a relative date and parsed with parsetime
+func parseDateTimeOrUnix(source string) (time.Time, error) {
+	if isUnixTimestamp(source) {
+		return unixStringToTime(source)
+	}
+	return parseDateTime(ConvertRelativeDateToActual(source))
 }

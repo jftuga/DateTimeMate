@@ -117,7 +117,8 @@ func (dur *Dur) Sub() ([]string, error) {
 }
 
 // addOrSub - calculates a date/time when given a starting date/time and a duration
-// also handle: the repeat and until options, relative dates, output formatting
+// also handle: the repeat and until options, relative dates, Unix timestamps,
+// output formatting
 func (dur *Dur) addOrSub(op int) ([]string, error) {
 	if dur.Repeat < 0 {
 		return nil, fmt.Errorf("repeat must not be negative: %d", dur.Repeat)
@@ -126,7 +127,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 		return nil, fmt.Errorf("repeat & until are mutually exclusive")
 	}
 
-	f, err := parseDateTime(ConvertRelativeDateToActual(dur.From))
+	f, err := parseDateTimeOrUnix(dur.From)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 			all = append(all, to)
 		}
 	default: // until
-		u, err := parseDateTime(ConvertRelativeDateToActual(dur.Until))
+		u, err := parseDateTimeOrUnix(dur.Until)
 		if err != nil {
 			return nil, err
 		}

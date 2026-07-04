@@ -94,6 +94,20 @@ func TestDiffUnixTimestamps(t *testing.T) {
 	testDiffStartEnd(t, "1700000000000", "1700000000500", false, "500 milliseconds")
 }
 
+func TestDiffAmbiguousTimestamp(t *testing.T) {
+	t.Parallel()
+	// 11 and 12 digit integers are neither seconds (10) nor milliseconds (13)
+	// and previously fell through to the date/time parsers
+	for _, start := range []string{"17000000001", "170000000012"} {
+		diff := NewDiff(
+			DiffWithStart(start),
+			DiffWithEnd("1700003600"))
+		if _, _, err := diff.CalculateDiff(); err == nil {
+			t.Errorf("expected an error for ambiguous timestamp %q, got nil", start)
+		}
+	}
+}
+
 func TestDiffYearOverflow(t *testing.T) {
 	t.Parallel()
 	diff := NewDiff(
