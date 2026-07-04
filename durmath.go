@@ -1,8 +1,9 @@
 // durmath.go implements duration arithmetic: adding or subtracting two
-// durations that may be expressed in different units. Results are signed and
-// rendered either as a largest-to-smallest breakdown from years down to
-// seconds (extended with sub-second units only when the result carries a
-// sub-second remainder) or converted to caller-specified target units.
+// durations that may be expressed in different units. Results are signed
+// (unless Absolute is set) and rendered either as a largest-to-smallest
+// breakdown from years down to seconds (extended with sub-second units only
+// when the result carries a sub-second remainder) or converted to
+// caller-specified target units.
 
 package DateTimeMate
 
@@ -23,12 +24,15 @@ var ErrNegativeDuration = errors.New("durmath does not accept negative durations
 // specific group of units; when empty, the result is a full breakdown from
 // years down to seconds. Brief renders compact output such as "2h15m".
 // Decimals sets the number of decimal places on the smallest output unit.
+// Absolute renders the result without a sign, e.g. -15 minutes becomes
+// 15 minutes.
 type DurMath struct {
 	First    string
 	Second   string
 	Target   string
 	Brief    bool
 	Decimals int
+	Absolute bool
 }
 
 // OptionsDurMath is a functional option used to configure a DurMath.
@@ -80,9 +84,17 @@ func DurMathWithDecimals(decimals int) OptionsDurMath {
 	}
 }
 
+// DurMathWithAbsolute makes Add and Sub return an absolute (positive)
+// duration; a negative result is rendered without the leading "-"
+func DurMathWithAbsolute(absolute bool) OptionsDurMath {
+	return func(dm *DurMath) {
+		dm.Absolute = absolute
+	}
+}
+
 // String returns a human-readable summary of the DurMath configuration.
 func (dm *DurMath) String() string {
-	return fmt.Sprintf("First:%v Second:%v Target:%v Brief:%v Decimals:%v", dm.First, dm.Second, dm.Target, dm.Brief, dm.Decimals)
+	return fmt.Sprintf("First:%v Second:%v Target:%v Brief:%v Decimals:%v Absolute:%v", dm.First, dm.Second, dm.Target, dm.Brief, dm.Decimals, dm.Absolute)
 }
 
 // Add returns the sum of the two durations.
@@ -91,7 +103,8 @@ func (dm *DurMath) Add() (string, error) {
 }
 
 // Sub returns the signed difference of the two durations, First minus Second;
-// a negative result is rendered with a single leading "-".
+// a negative result is rendered with a single leading "-" unless Absolute
+// is set.
 func (dm *DurMath) Sub() (string, error) {
 	return dm.compute(true)
 }
@@ -171,7 +184,7 @@ func (dm *DurMath) compute(subtract bool) (string, error) {
 		out = shrinkPeriod(out)
 	}
 	out = strings.TrimSpace(out)
-	if negative {
+	if negative && !dm.Absolute {
 		out = "-" + out
 	}
 	return out, nil

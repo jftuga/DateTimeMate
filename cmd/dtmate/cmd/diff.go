@@ -44,6 +44,7 @@ var optDiffBrief bool
 var optDiffReadFromStdin bool
 var optDiffConv string
 var optDiffDecimals int
+var optDiffAbsolute bool
 
 func init() {
 	rootCmd.AddCommand(diffCmd)
@@ -51,6 +52,7 @@ func init() {
 	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read from STDIN instead of using -s/-e")
 	diffCmd.Flags().StringVarP(&optDiffConv, "conv", "c", "", "convert resulting duration to another group of units")
 	diffCmd.Flags().IntVarP(&optDiffDecimals, "decimals", "d", 0, "with -c: show the smallest unit with this many decimal places, rounded")
+	diffCmd.Flags().BoolVarP(&optDiffAbsolute, "absolute", "A", false, "always output an absolute (positive) duration")
 }
 
 // either read one line containing a comma, then split start and end on this
@@ -89,7 +91,7 @@ func outputDiff(start, end string, brief bool) {
 		fmt.Fprintln(os.Stderr, "-d/--decimals requires -c/--conv")
 		os.Exit(1)
 	}
-	diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), DateTimeMate.DiffWithBrief(brief))
+	diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), DateTimeMate.DiffWithBrief(brief), DateTimeMate.DiffWithAbsolute(optDiffAbsolute))
 	result, _, err := diff.CalculateDiff()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

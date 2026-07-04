@@ -1,7 +1,8 @@
 // durmath.go implements the 'durmath' sub-command, which adds or subtracts
 // two durations that may be expressed in different units. The operation is
 // selected with -a/--add or -s/--sub, and the signed result can optionally be
-// converted to target units (-c), rounded (-d), or output in brief form (-b).
+// converted to target units (-c), rounded (-d), output in brief form (-b),
+// or rendered as an absolute (positive) duration (-A).
 
 package cmd
 
@@ -33,6 +34,7 @@ var (
 	optDurMathConv     string
 	optDurMathBrief    bool
 	optDurMathDecimals int
+	optDurMathAbsolute bool
 )
 
 func init() {
@@ -42,6 +44,7 @@ func init() {
 	durMathCmd.Flags().StringVarP(&optDurMathConv, "conv", "c", "", "convert resulting duration to another group of units")
 	durMathCmd.Flags().BoolVarP(&optDurMathBrief, "brief", "b", false, "output in brief format, such as: 1Y3W4D5h6m7s")
 	durMathCmd.Flags().IntVarP(&optDurMathDecimals, "decimals", "d", 0, "with -c: show the smallest unit with this many decimal places, rounded")
+	durMathCmd.Flags().BoolVarP(&optDurMathAbsolute, "absolute", "A", false, "always output an absolute (positive) duration")
 	durMathCmd.MarkFlagsOneRequired("add", "sub")
 	durMathCmd.MarkFlagsMutuallyExclusive("add", "sub")
 	durMathCmd.SetFlagErrorFunc(negativeDurationHint("durmath", "Use -a/--add or -s/--sub to control the operation, e.g.:\n  dtmate durmath 2h 30m -s"))
@@ -60,7 +63,8 @@ func outputDurMath(first, second string) error {
 		DateTimeMate.DurMathWithSecond(second),
 		DateTimeMate.DurMathWithTarget(optDurMathConv),
 		DateTimeMate.DurMathWithBrief(optDurMathBrief),
-		DateTimeMate.DurMathWithDecimals(optDurMathDecimals))
+		DateTimeMate.DurMathWithDecimals(optDurMathDecimals),
+		DateTimeMate.DurMathWithAbsolute(optDurMathAbsolute))
 
 	var result string
 	var err error
