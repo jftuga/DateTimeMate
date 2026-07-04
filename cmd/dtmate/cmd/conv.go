@@ -15,8 +15,10 @@ var optConvBrief bool
 var optConvDecimals int
 
 var convCmd = &cobra.Command{
-	Use:                "conv [source duration] [target duration]",
-	Short:              "Convert a duration from group of units to another",
+	Use:   "conv [source duration] [target duration]",
+	Short: "Convert a duration from group of units to another",
+	Example: `  dtmate conv 90m hm
+  dtmate conv 4321s123456789ns hms.msusns`,
 	Args:               cobra.ArbitraryArgs,
 	DisableFlagParsing: true, // this allows for negative durations; flags are parsed manually in RunE
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,7 +44,7 @@ var convCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(convCmd)
-	convCmd.Flags().BoolVarP(&optConvBrief, "brief", "b", false, "output in brief format, such as: 1Y2M3D4h5m6s7ms8us9ns")
+	convCmd.Flags().BoolVarP(&optConvBrief, "brief", "b", false, "output in brief format, such as: 1Y3W4D5h6m7s")
 	convCmd.Flags().IntVarP(&optConvDecimals, "decimals", "d", 0, "show the smallest unit with this many decimal places, rounded")
 }
 

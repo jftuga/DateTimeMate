@@ -13,7 +13,9 @@ import (
 var durCmd = &cobra.Command{
 	Use:   "dur [from] [duration]",
 	Short: "Output a date/time when given a starting date/time and duration",
-	Args:  cobra.MatchAll(cobra.ExactArgs(2)),
+	Example: `  dtmate dur now 1D2h -a
+  dtmate dur today 7h10m -a -u tomorrow`,
+	Args: cobra.MatchAll(cobra.ExactArgs(2)),
 	Run: func(cmd *cobra.Command, args []string) {
 		outputDur(args[0], args[1], optDurUntil, optDurFormat, optDurRepeat)
 	},
@@ -30,8 +32,8 @@ var (
 
 func init() {
 	rootCmd.AddCommand(durCmd)
-	durCmd.Flags().BoolVarP(&optDurAdd, "add", "a", false, "add: a duration to use with -f, such as '1D2h3s' or '1 day 2 hours 3 seconds'")
-	durCmd.Flags().BoolVarP(&optDurSub, "sub", "s", false, "subtract: a duration to use with -f, such as '4 weeks 3 days 2 hours'")
+	durCmd.Flags().BoolVarP(&optDurAdd, "add", "a", false, "add the duration to the starting date/time")
+	durCmd.Flags().BoolVarP(&optDurSub, "sub", "s", false, "subtract the duration from the starting date/time")
 	durCmd.Flags().StringVarP(&optDurUntil, "until", "u", "", "repeat duration until this date/time is exceeded")
 	durCmd.Flags().StringVarP(&optDurFormat, "format", "f", "", "output results with strftime formatting")
 	durCmd.Flags().IntVarP(&optDurRepeat, "repeat", "r", 0, "repeat the -a or -s duration this number of times (mutually exclusive with -u)")
