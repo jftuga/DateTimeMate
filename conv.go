@@ -110,10 +110,15 @@ func (conv *Conv) parseSource() (float64, error) {
 		if err != nil {
 			return 0, err
 		}
-		unit := strings.ToLower(removeTrailingS(parts[i+1]))
-		if seconds, ok := unitMap[unit]; ok {
-			totalSeconds += value * seconds
+		if i+1 >= len(parts) {
+			return 0, fmt.Errorf("missing unit after %q in: %s", parts[i], conv.Source)
 		}
+		unit := strings.ToLower(removeTrailingS(parts[i+1]))
+		seconds, ok := unitMap[unit]
+		if !ok {
+			return 0, fmt.Errorf("unknown source unit: %q", parts[i+1])
+		}
+		totalSeconds += value * seconds
 	}
 	return totalSeconds, nil
 }
@@ -139,9 +144,9 @@ func (conv *Conv) parseSource() (float64, error) {
 func (conv *Conv) formatTarget(seconds float64, units []string) string {
 	result := ""
 	for i, unit := range units {
-		unitInSeconds := unitMap[strings.TrimSuffix(unit, "s")]
+		unit = strings.ToLower(removeTrailingS(unit))
+		unitInSeconds := unitMap[unit]
 		value := seconds / unitInSeconds
-		unit = removeTrailingS(unit)
 
 		if conv.Decimals > 0 && i == len(units)-1 {
 			if value < 0 { // guard against float underflow producing "-0.00"
@@ -167,7 +172,27 @@ func (conv *Conv) formatTarget(seconds float64, units []string) string {
 		result += fmt.Sprintf("%d %s ", intValue, unit)
 		seconds -= float64(intValue) * unitInSeconds
 	}
+	if result == "" {
+		// every unit truncated to zero, so emit zero of the smallest unit
+		// instead of an empty string
+		result = fmt.Sprintf("0 %ss", strings.ToLower(removeTrailingS(units[len(units)-1])))
+	}
 	return strings.TrimSpace(result)
+}
+
+// isLongFormDuration reports whether the fields form alternating
+// amount/unit pairs, such as "1 hour 30 minutes"; anything else, including
+// brief formats with spaces such as "1h 30m", needs brief expansion
+func isLongFormDuration(fields []string) bool {
+	if len(fields) == 0 || len(fields)%2 != 0 {
+		return false
+	}
+	for i := 0; i < len(fields); i += 2 {
+		if _, err := strconv.ParseFloat(fields[i], 64); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // expandBriefSourceDuration expands a brief period into a long period format
@@ -249,13 +274,13 @@ func (conv *Conv) ConvertDuration() (string, error) {
 		conv.Source = s
 		isNegativeDuration = true
 	}
-	fields := strings.Fields(conv.Source)
-	if len(fields) == 1 {
+	if !isLongFormDuration(strings.Fields(conv.Source)) {
 		// brief format is being used so convert to long duration format
-		conv.Source, err = expandBriefSourceDuration(conv.Source)
+		expandedSource, err := expandBriefSourceDuration(conv.Source)
 		if nil != err {
-			return "", err
+			return "", fmt.Errorf("invalid source duration %q: %v", conv.Source, err)
 		}
+		conv.Source = expandedSource
 	}
 	seconds, err := conv.parseSource()
 	if err != nil {
@@ -263,13 +288,18 @@ func (conv *Conv) ConvertDuration() (string, error) {
 	}
 	targetUnits := strings.Fields(conv.Target)
 	if len(targetUnits) == 1 {
-		_, ok := unitMap[removeTrailingS(conv.Target)]
+		_, ok := unitMap[strings.ToLower(removeTrailingS(conv.Target))]
 		if !ok {
 			// brief format is being used so convert to long duration format
 			targetUnits, err = expandBriefTargetDuration(conv.Target)
 			if nil != err {
 				return "", err
 			}
+		}
+	}
+	for _, unit := range targetUnits {
+		if _, ok := unitMap[strings.ToLower(removeTrailingS(unit))]; !ok {
+			return "", fmt.Errorf("unknown target unit: %q", unit)
 		}
 	}
 	result := conv.formatTarget(seconds, targetUnits)

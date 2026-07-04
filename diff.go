@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/golang-module/carbon/v2"
 	"github.com/hako/durafmt"
-	"github.com/jftuga/parsetime"
 	"time"
 )
 
@@ -46,39 +45,30 @@ func (diff *Diff) String() string {
 	return fmt.Sprintf("Start:%v End:%v Brief:%v", diff.Start, diff.End, diff.Brief)
 }
 
+// parseDiffTime parses one side of a diff: 10-digit (seconds) and 13-digit
+// (milliseconds) integers are treated as Unix timestamps; anything else is
+// parsed with carbon first, falling back to parsetime if carbon fails
+func parseDiffTime(source string) (time.Time, error) {
+	if isPureIntegerAtoi(source) && (len(source) == 10 || len(source) == 13) {
+		return unixStringToTime(source)
+	}
+	converted := ConvertRelativeDateToActual(source)
+	if c := carbon.Parse(converted); c.Error == nil {
+		return c.StdTime(), nil
+	}
+	return parseDateTime(converted)
+}
+
 // CalculateDiff return the time difference and also set dt.Diff
 // first try to parse with carbon, fallback to parsing with parsetime if carbon fails to parse
 func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
-	var start, end time.Time
-
-	alpha := carbon.Parse(ConvertRelativeDateToActual(diff.Start))
-	if alpha.Error != nil {
-		// fmt.Println("alpha:", alpha.Error)
-		p, err := parsetime.NewParseTime()
-		if err != nil {
-			return "", 0, err
-		}
-		start, err = p.Parse(diff.Start)
-		if err != nil {
-			return "", 0, err
-		}
-	} else {
-		start = alpha.StdTime()
+	start, err := parseDiffTime(diff.Start)
+	if err != nil {
+		return "", 0, err
 	}
-
-	omega := carbon.Parse(ConvertRelativeDateToActual(diff.End))
-	if omega.Error != nil {
-		// fmt.Println("omega:", omega.Error)
-		p, err := parsetime.NewParseTime()
-		if err != nil {
-			return "", 0, err
-		}
-		end, err = p.Parse(diff.End)
-		if err != nil {
-			return "", 0, err
-		}
-	} else {
-		end = omega.StdTime()
+	end, err := parseDiffTime(diff.End)
+	if err != nil {
+		return "", 0, err
 	}
 
 	yearDiff := end.Year() - start.Year()

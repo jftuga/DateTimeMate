@@ -87,6 +87,13 @@ func TestDiffMilliSeconds(t *testing.T) {
 	testDiffStartEnd(t, start, end, true, correctBrief)
 }
 
+func TestDiffUnixTimestamps(t *testing.T) {
+	t.Parallel()
+	// 10-digit timestamps are seconds; 13-digit timestamps are milliseconds
+	testDiffStartEnd(t, "1700000000", "1700003600", false, "1 hour")
+	testDiffStartEnd(t, "1700000000000", "1700000000500", false, "500 milliseconds")
+}
+
 func TestDiffYearOverflow(t *testing.T) {
 	t.Parallel()
 	diff := NewDiff(

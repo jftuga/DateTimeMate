@@ -4,6 +4,7 @@ import (
 	"github.com/golang-module/carbon/v2"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testDurAddSubContains(t *testing.T, from, period, correctAdd, correctSub string) {
@@ -111,6 +112,78 @@ func testDurSubUntil(t *testing.T, from, until, periodPast string, correctSub []
 		if !strings.Contains(past[i], correctSub[i]) {
 			t.Errorf("[from: %v] [computed: %v] does not contain: [correct: %v]", from, past[i], correctSub[i])
 		}
+	}
+}
+
+func TestDurFractionalPeriod(t *testing.T) {
+	t.Parallel()
+	from := "2024-01-01 00:00:00"
+	period := "1.5 hours"
+	briefPeriod := "1.5h"
+	correctAdd := "2024-01-01 01:30:00"
+	correctSub := "2023-12-31 22:30:00"
+	testDurAddSubContains(t, from, period, correctAdd, correctSub)
+	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
+}
+
+func TestDurInvalidPeriodText(t *testing.T) {
+	t.Parallel()
+	// no part of a period may be silently ignored
+	for _, period := range []string{"1 hour 2", "1 hour 2m", "1 hour bananas", "1.5.2 hours"} {
+		dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur(period))
+		if _, err := dur.Add(); err == nil {
+			t.Errorf("expected an error for period %q, got nil", period)
+		}
+	}
+}
+
+func TestDurNegativeRepeat(t *testing.T) {
+	t.Parallel()
+	dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur("1 hour"), DurWithRepeat(-1))
+	if _, err := dur.Add(); err == nil {
+		t.Error("expected an error for a negative repeat, got nil")
+	}
+}
+
+func TestDurZeroPeriodUntil(t *testing.T) {
+	t.Parallel()
+	// a period that does not advance must error instead of looping forever
+	dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur("0 minutes"), DurWithUntil("2024-01-02"))
+	if _, err := dur.Add(); err == nil {
+		t.Error("expected an error for a zero-length period with until, got nil")
+	}
+}
+
+func TestDurSubSecondRepeat(t *testing.T) {
+	t.Parallel()
+	// sub-second precision must survive repeated application
+	from := "2024-01-01 00:00:00"
+	period := "500ms"
+	repeat := 3
+	allCorrectAdd := []string{"2024-01-01 00:00:00.5 ", "2024-01-01 00:00:01 ", "2024-01-01 00:00:01.5 "}
+	allCorrectSub := []string{"2023-12-31 23:59:59.5 ", "2023-12-31 23:59:59 ", "2023-12-31 23:59:58.5 "}
+	testDurAddSubWithRepeat(t, from, period, allCorrectAdd, allCorrectSub, repeat)
+}
+
+func TestDurWinterTimezoneOffset(t *testing.T) {
+	t.Parallel()
+	// a zone-less date must resolve with the local UTC offset in effect on
+	// that date, not the offset in effect today
+	dur := NewDur(DurWithFrom("2024-01-15 12:00:00"), DurWithDur("1 hour"))
+	future, err := dur.Add()
+	if err != nil {
+		t.Fatal(err)
+	}
+	computed, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", future[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	correct, err := time.ParseInLocation("2006-01-02 15:04:05", "2024-01-15 13:00:00", time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !computed.Equal(correct) {
+		t.Errorf("[computed: %v] != [correct: %v]", computed, correct)
 	}
 }
 
