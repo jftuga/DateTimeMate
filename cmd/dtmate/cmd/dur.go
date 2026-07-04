@@ -40,6 +40,22 @@ func init() {
 	durCmd.MarkFlagsOneRequired("add", "sub")
 	durCmd.MarkFlagsMutuallyExclusive("add", "sub")
 	durCmd.MarkFlagsMutuallyExclusive("repeat", "until")
+	durCmd.SetFlagErrorFunc(negativeDurationHint)
+}
+
+// negativeDurationHint rewrites the cryptic pflag error produced when a user
+// passes a negative-looking duration (e.g. "-1h") to 'dur' into a clear message
+// directing them to -s/--sub. Any other flag error is returned unchanged.
+func negativeDurationHint(cmd *cobra.Command, err error) error {
+	const marker = "unknown shorthand flag: '"
+	msg := err.Error()
+	if i := strings.Index(msg, marker); i != -1 {
+		c := msg[i+len(marker)]
+		if c >= '0' && c <= '9' {
+			return fmt.Errorf("'dur' does not accept negative durations.\nUse -s/--sub to subtract, e.g.:\n  dtmate dur now 1h -s\n")
+		}
+	}
+	return err
 }
 
 func outputDur(from, duration, until, format string, repeat int) {
