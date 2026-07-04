@@ -30,7 +30,7 @@ type Dur struct {
 type OptionsDur func(*Dur)
 
 const (
-	expanded  string = `(\d+)\s(years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
+	expanded  string = `(\d+)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
 	wordsOnly string = `\b[a-zA-Z]+\b`
 	hintMsg   string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
 )

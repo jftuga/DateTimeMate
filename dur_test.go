@@ -160,7 +160,7 @@ func TestDurYearsDays(t *testing.T) {
 	from := "2000-01-01"
 	period := "5 years 70 days"
 	briefPeriod := "5Y70D"
-	correctAdd := "2005-03-11"
+	correctAdd := "2005-03-12"
 	correctSub := "1994-10-23"
 	testDurAddSubContains(t, from, period, correctAdd, correctSub)
 	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
@@ -173,8 +173,8 @@ func TestDurYearsDaysHoursMinutesSeconds(t *testing.T) {
 	from := "2024-01-01"
 	period := "13 years 272 days 16 hours 15 minutes 15 seconds"
 	briefPeriod := "13Y272D16h15m15s"
-	correctAdd := "2037-09-29 16:15:15"
-	correctSub := "2010-04-02 07:44:45"
+	correctAdd := "2037-09-30 16:15:15"
+	correctSub := "2010-04-03 07:44:45"
 	testDurAddSubContains(t, from, period, correctAdd, correctSub)
 	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
 	ofmt := "%Y-%m-%d %H:%M:%S"
@@ -199,8 +199,8 @@ func TestDurWeeksDays2(t *testing.T) {
 	from := "2024-06-15"
 	period := "11 weeks 2 days"
 	briefPeriod := "11W2D"
-	correctAdd := "2024-08-31"
-	correctSub := "2024-03-30"
+	correctAdd := "2024-09-02"
+	correctSub := "2024-03-28"
 	testDurAddSubContains(t, from, period, correctAdd, correctSub)
 	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
 	ofmt := "%Y-%m-%d"
@@ -212,8 +212,8 @@ func TestDurYearsWeeksDays(t *testing.T) {
 	from := "2031-07-12"
 	period := "2 years 11 weeks 2 days"
 	briefPeriod := "2Y11W2D"
-	correctAdd := "2033-09-28"
-	correctSub := "2029-04-26"
+	correctAdd := "2033-09-29"
+	correctSub := "2029-04-24"
 	testDurAddSubContains(t, from, period, correctAdd, correctSub)
 	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
 	ofmt := "%Y-%m-%d"
@@ -240,8 +240,8 @@ func TestDurWithRepeat(t *testing.T) {
 	from := "2024-06-28T04:25:41Z"
 	period := "5W1h1m2s"
 	repeat := 3
-	allCorrectAdd := []string{"2024-08-04 05:26:43", "2024-09-11 06:27:45", "2024-10-18 07:28:47"}
-	allCorrectSub := []string{"2024-05-21 03:24:39", "2024-04-14 02:23:37", "2024-03-07 01:22:35"}
+	allCorrectAdd := []string{"2024-08-02 05:26:43", "2024-09-06 06:27:45", "2024-10-11 07:28:47"}
+	allCorrectSub := []string{"2024-05-24 03:24:39", "2024-04-19 02:23:37", "2024-03-15 01:22:35"}
 	testDurAddSubWithRepeat(t, from, period, allCorrectAdd, allCorrectSub, repeat)
 }
 
@@ -249,8 +249,8 @@ func TestDurAddUntil(t *testing.T) {
 	t.Parallel()
 	from := "2024-06-28T04:25:41Z"
 	period := "5W1h1m2s"
-	until := "2024-10-18 07:28:47"
-	allCorrectAdd := []string{"2024-08-04 05:26:43", "2024-09-11 06:27:45", "2024-10-18 07:28:47"}
+	until := "2024-10-11 07:28:47"
+	allCorrectAdd := []string{"2024-08-02 05:26:43", "2024-09-06 06:27:45", "2024-10-11 07:28:47"}
 	testDurAddUntil(t, from, until, period, allCorrectAdd)
 }
 
@@ -258,8 +258,8 @@ func TestDurSubUntil(t *testing.T) {
 	t.Parallel()
 	from := "2024-10-18 07:28:47"
 	period := "5W1h1m2s"
-	until := "2024-05-28T04:25:41Z"
-	allCorrectSub := []string{"2024-09-11 06:27:45", "2024-08-04 05:26:43", "2024-06-27 04:25:41"}
+	until := "2024-06-28T04:25:41Z"
+	allCorrectSub := []string{"2024-09-13 06:27:45", "2024-08-09 05:26:43", "2024-07-05 04:25:41"}
 	testDurSubUntil(t, from, until, period, allCorrectSub)
 }
 

@@ -9,8 +9,8 @@ github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b h1:wDUNC2eKiL35DbLvsD
 github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b/go.mod h1:VzxiSdG6j1pi7rwGm/xYI5RbtpBgM8sARDXlvEvxlu0=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/jftuga/parsetime v0.0.0-20241123142602-2d95cf3bd8f4 h1:szr4VFeuRzdmIogyodCv3Pd7rtaa92H653SAmqdZ7Fc=
-github.com/jftuga/parsetime v0.0.0-20241123142602-2d95cf3bd8f4/go.mod h1:aCnN8ENqmC/h4OY+q6aYnh9rt0jVn4HzkiBWH5ZaN1o=
+github.com/jftuga/parsetime v0.4.0 h1:4AKQO8fcdPw84SShKGHGsm7u7Sso13jPzZmAJPrqUSU=
+github.com/jftuga/parsetime v0.4.0/go.mod h1:aCnN8ENqmC/h4OY+q6aYnh9rt0jVn4HzkiBWH5ZaN1o=
 github.com/lestrrat-go/envload v0.0.0-20180220234015-a3eb8ddeffcc h1:RKf14vYWi2ttpEmkA4aQ3j4u9dStX2t4M8UM6qqNsG8=
 github.com/lestrrat-go/envload v0.0.0-20180220234015-a3eb8ddeffcc/go.mod h1:kopuH9ugFRkIXf3YoqHKyrJ9YfUFsckUU9S7B+XP+is=
 github.com/lestrrat-go/strftime v1.0.6 h1:CFGsDEt1pOpFNU+TJB0nhz9jl+K0hZSLE205AhTIGQQ=
