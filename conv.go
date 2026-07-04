@@ -88,6 +88,13 @@ func (conv *Conv) String() string {
 	return fmt.Sprintf("Source:%v Target:%v Brief:%v Decimals:%v", conv.Source, conv.Target, conv.Brief, conv.Decimals)
 }
 
+// normalizeUnit lowercases a unit name and strips a plural trailing "s"
+// so that forms such as "DAYS", "Days", and "days" all match the
+// singular lowercase keys used in unitMap
+func normalizeUnit(unit string) string {
+	return removeTrailingS(strings.ToLower(unit))
+}
+
 // parseSource parses the Source field of the Conv struct
 // and converts it to a total number of seconds.
 //
@@ -113,7 +120,7 @@ func (conv *Conv) parseSource() (float64, error) {
 		if i+1 >= len(parts) {
 			return 0, fmt.Errorf("missing unit after %q in: %s", parts[i], conv.Source)
 		}
-		unit := strings.ToLower(removeTrailingS(parts[i+1]))
+		unit := normalizeUnit(parts[i+1])
 		seconds, ok := unitMap[unit]
 		if !ok {
 			return 0, fmt.Errorf("unknown source unit: %q", parts[i+1])
@@ -144,7 +151,7 @@ func (conv *Conv) parseSource() (float64, error) {
 func (conv *Conv) formatTarget(seconds float64, units []string) string {
 	result := ""
 	for i, unit := range units {
-		unit = strings.ToLower(removeTrailingS(unit))
+		unit = normalizeUnit(unit)
 		unitInSeconds := unitMap[unit]
 		value := seconds / unitInSeconds
 
@@ -175,7 +182,7 @@ func (conv *Conv) formatTarget(seconds float64, units []string) string {
 	if result == "" {
 		// every unit truncated to zero, so emit zero of the smallest unit
 		// instead of an empty string
-		result = fmt.Sprintf("0 %ss", strings.ToLower(removeTrailingS(units[len(units)-1])))
+		result = fmt.Sprintf("0 %ss", normalizeUnit(units[len(units)-1]))
 	}
 	return strings.TrimSpace(result)
 }
@@ -287,8 +294,11 @@ func (conv *Conv) ConvertDuration() (string, error) {
 		return "", err
 	}
 	targetUnits := strings.Fields(conv.Target)
+	if len(targetUnits) == 0 {
+		return "", fmt.Errorf("no target units specified")
+	}
 	if len(targetUnits) == 1 {
-		_, ok := unitMap[strings.ToLower(removeTrailingS(conv.Target))]
+		_, ok := unitMap[normalizeUnit(conv.Target)]
 		if !ok {
 			// brief format is being used so convert to long duration format
 			targetUnits, err = expandBriefTargetDuration(conv.Target)
@@ -298,7 +308,7 @@ func (conv *Conv) ConvertDuration() (string, error) {
 		}
 	}
 	for _, unit := range targetUnits {
-		if _, ok := unitMap[strings.ToLower(removeTrailingS(unit))]; !ok {
+		if _, ok := unitMap[normalizeUnit(unit)]; !ok {
 			return "", fmt.Errorf("unknown target unit: %q", unit)
 		}
 	}
