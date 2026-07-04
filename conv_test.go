@@ -94,6 +94,37 @@ func TestConvDecimalsOutOfRange(t *testing.T) {
 	}
 }
 
+func TestConvInvalidInput(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ source, target string }{
+		{"1 hour 2", "hours"},           // dangling amount with no unit (used to panic)
+		{"1 fortnight", "hours"},        // unknown source unit (used to output nothing)
+		{"90 minutes", "hours bananas"}, // unknown target unit (used to divide by zero)
+		{"90 minutes", "fortnights"},    // unknown single target unit
+	}
+	for _, c := range cases {
+		conv := NewConv(ConvWithSource(c.source), ConvWithTarget(c.target))
+		if _, err := conv.ConvertDuration(); err == nil {
+			t.Errorf("expected an error for source %q target %q, got nil", c.source, c.target)
+		}
+	}
+}
+
+func TestConvZeroResult(t *testing.T) {
+	t.Parallel()
+	// a result that truncates to zero emits zero of the smallest unit
+	// instead of an empty string
+	testConv(t, "3599 seconds", "hours", false, "0 hours")
+	testConv(t, "3599 seconds", "hours", true, "0h")
+	testConv(t, "0 seconds", "days hours", false, "0 hours")
+}
+
+func TestConvBriefWithSpaces(t *testing.T) {
+	t.Parallel()
+	testConv(t, "1h 30m", "minutes", false, "90 minutes")
+	testConv(t, "1Y 3W 4D", "days", false, "390 days")
+}
+
 func TestConvHoursMinutesSeconds(t *testing.T) {
 	t.Parallel()
 	source := "386 hours 24 minutes 36 seconds"

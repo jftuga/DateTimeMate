@@ -1,6 +1,35 @@
 package DateTimeMate
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+	"time"
+)
+
+func TestReformatWinterUnixSeconds(t *testing.T) {
+	// a zone-less winter date must convert to the unix timestamp using the
+	// local UTC offset in effect on that date, not the offset in effect today
+	correct, err := time.ParseInLocation("2006-01-02 15:04:05", "2024-01-01 00:00:00", time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	computed, err := Reformat("2024-01-01 00:00:00", "%s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if computed != strconv.FormatInt(correct.Unix(), 10) {
+		t.Errorf("[computed: %v] != [correct: %v]", computed, correct.Unix())
+	}
+}
+
+func TestReformatAmbiguousTimestampLength(t *testing.T) {
+	// 11, 12, and 14+ digit integers are neither seconds nor milliseconds
+	for _, source := range []string{"12345678901", "123456789012", "12345678901234"} {
+		if _, err := Reformat(source, "%F"); err == nil {
+			t.Errorf("expected an error for timestamp %q, got nil", source)
+		}
+	}
+}
 
 func TestShrinkPeriod(t *testing.T) {
 	// explicitly define these here as a sanity check vs just iterating through abbrevMap

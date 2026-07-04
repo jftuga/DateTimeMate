@@ -21,7 +21,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.7.0"
+	ModVersion string = "1.8.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -83,10 +83,37 @@ func removeTrailingS(s string) string {
 	return strings.TrimSuffix(s, "s")
 }
 
+// fixLocalZone corrects the offset of zone-less date/times: parsetime stamps
+// them with a fixed snapshot of today's zone (e.g. EDT on a January date), so
+// reinterpret the wall clock in time.Local, which resolves the DST offset in
+// effect on that date; times that carry any other explicit zone are untouched
+func fixLocalZone(t time.Time) time.Time {
+	name, offset := t.Zone()
+	nowName, nowOffset := time.Now().Zone()
+	if name == nowName && offset == nowOffset {
+		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Local)
+	}
+	return t
+}
+
+// parseDateTime parses a date/time string with parsetime, correcting the
+// DST offset of zone-less strings via fixLocalZone
+func parseDateTime(source string) (time.Time, error) {
+	p, err := parsetime.NewParseTime()
+	if err != nil {
+		return time.Time{}, err
+	}
+	t, err := p.Parse(source)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return fixLocalZone(t), nil
+}
+
 // Reformat converts a date/time string into a specified format. The source can be:
 //   - A Unix timestamp (e.g., "1700265600")
 //   - A relative date (e.g., "yesterday", "now")
-//   - Any other date format parseable by parsetime
+//   - Any other parseable date format
 //
 // The outputFormat parameter uses strftime format specifiers, with additional
 // support for Unix seconds via '%s'.
@@ -103,18 +130,6 @@ func removeTrailingS(s string) string {
 //   - The time parser initialization fails
 func Reformat(source string, outputFormat string) (string, error) {
 	source = strings.TrimSpace(source)
-	if isPureIntegerAtoi(source) {
-		if source[0] == '-' {
-			return "", fmt.Errorf("timestamps can't be negative: %v", source)
-		}
-		t, err := unixStringToTime(source)
-		if err != nil {
-			return "", err
-		}
-		source = t.String()
-	} else {
-		source = ConvertRelativeDateToActual(source)
-	}
 
 	// creates a new Strftime instance
 	// outputFormat is a pattern string that follows strftime formatting
@@ -123,35 +138,43 @@ func Reformat(source string, outputFormat string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p, err := parsetime.NewParseTime()
-	if err != nil {
-		return "", err
-	}
-	s, err := p.Parse(source)
-	if err != nil {
-		return "", err
 
+	var t time.Time
+	if isPureIntegerAtoi(source) {
+		if source[0] == '-' {
+			return "", fmt.Errorf("timestamps can't be negative: %v", source)
+		}
+		t, err = unixStringToTime(source)
+	} else {
+		t, err = parseDateTime(ConvertRelativeDateToActual(source))
 	}
-	return f.FormatString(s), nil
+	if err != nil {
+		return "", err
+	}
+	return f.FormatString(t), nil
 }
 
 // unixStringToTime converts a string containing a Unix timestamp to time.Time.
-// It accepts timestamps in both seconds (10 digits) and milliseconds (13 digits).
+// It accepts timestamps in seconds (up to 10 digits) and milliseconds (13 digits).
 // Returns the corresponding time.Time and any error encountered during conversion.
 //
-// If the input string is not a valid integer or is empty,
-// it returns a zero time.Time and an error.
+// If the input string is not a valid integer, is empty, or has an ambiguous
+// length (11, 12, or more than 13 digits), it returns a zero time.Time and an error.
 func unixStringToTime(timestamp string) (time.Time, error) {
-	unixTime, err := strconv.ParseInt(strings.TrimSpace(timestamp), 10, 64)
+	timestamp = strings.TrimSpace(timestamp)
+	unixTime, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	if len(timestamp) == 13 {
+	switch {
+	case len(timestamp) <= 10:
+		return time.Unix(unixTime, 0), nil
+	case len(timestamp) == 13:
 		return time.UnixMilli(unixTime), nil
+	default:
+		return time.Time{}, fmt.Errorf("ambiguous timestamp length %d for %q: expected up to 10 digits (seconds) or exactly 13 (milliseconds)", len(timestamp), timestamp)
 	}
-
-	return time.Unix(unixTime, 0), nil
 }
 
 // isPureIntegerAtoi reports whether a string contains a valid base-10 integer.

@@ -3,9 +3,8 @@ package DateTimeMate
 import (
 	"fmt"
 	"github.com/golang-module/carbon/v2"
-	"github.com/jftuga/parsetime"
 	"github.com/lestrrat-go/strftime"
-	"os"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,9 +29,14 @@ type Dur struct {
 type OptionsDur func(*Dur)
 
 const (
-	expanded  string = `(\d+)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
-	wordsOnly string = `\b[a-zA-Z]+\b`
-	hintMsg   string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
+	// a period is a series of amount/unit pairs; the amount must start at the
+	// beginning of the string or after whitespace so that a fractional amount
+	// such as "1.5" can never be partially matched as "5"
+	expanded string = `(?:^|\s)(\d+(?:\.\d+)?)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
+	hintMsg  string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
+
+	// maxUntilIterations is a backstop against unbounded output from the until option
+	maxUntilIterations = 1_000_000
 )
 
 var carbonFuncs = map[string]interface{}{
@@ -45,6 +49,20 @@ var carbonFuncs = map[string]interface{}{
 	"millisecond": [2]interface{}{carbon.Carbon.AddMilliseconds, carbon.Carbon.SubMilliseconds},
 	"microsecond": [2]interface{}{carbon.Carbon.AddMicroseconds, carbon.Carbon.SubMicroseconds},
 	"nanosecond":  [2]interface{}{carbon.Carbon.AddNanoseconds, carbon.Carbon.SubNanoseconds},
+}
+
+// unitNanoseconds is used to apply the fractional part of an amount, so the
+// calendar-aware carbon functions still handle the integer part
+var unitNanoseconds = map[string]float64{
+	"year":        365.25 * 24 * float64(time.Hour),
+	"week":        7 * 24 * float64(time.Hour),
+	"day":         24 * float64(time.Hour),
+	"hour":        float64(time.Hour),
+	"minute":      float64(time.Minute),
+	"second":      float64(time.Second),
+	"millisecond": float64(time.Millisecond),
+	"microsecond": float64(time.Microsecond),
+	"nanosecond":  1,
 }
 
 var expandedRegexp = regexp.MustCompile(expanded)
@@ -101,164 +119,155 @@ func (dur *Dur) Sub() ([]string, error) {
 // addOrSub - calculates a date/time when given a starting date/time and a duration
 // also handle: the repeat and until options, relative dates, output formatting
 func (dur *Dur) addOrSub(op int) ([]string, error) {
+	if dur.Repeat < 0 {
+		return nil, fmt.Errorf("repeat must not be negative: %d", dur.Repeat)
+	}
 	if dur.Repeat > 0 && dur.Until != "" {
 		return nil, fmt.Errorf("repeat & until are mutually exclusive")
 	}
 
-	var all []string
-	var err error
-	if dur.Repeat == 0 && dur.Until == "" {
-		var c string
-		c, err = calculate(dur.From, dur.Period, op)
+	f, err := parseDateTime(ConvertRelativeDateToActual(dur.From))
+	if err != nil {
+		return nil, err
+	}
+	from := carbon.CreateFromStdTime(f)
+	if from.Error != nil {
+		return nil, from.Error
+	}
+	periodMatches, err := parsePeriod(dur.Period)
+	if err != nil {
+		return nil, err
+	}
+
+	var all []carbon.Carbon
+	switch {
+	case dur.Repeat == 0 && dur.Until == "":
+		to, err := applyPeriod(from, periodMatches, op)
 		if err != nil {
 			return nil, err
 		}
-		all = []string{c}
-	} else if dur.Repeat > 0 && dur.Until == "" {
-		from := dur.From
+		all = append(all, to)
+	case dur.Repeat > 0:
+		to := from
 		for i := 0; i < dur.Repeat; i++ {
-			from, err = calculate(from, dur.Period, op)
+			to, err = applyPeriod(to, periodMatches, op)
 			if err != nil {
 				return nil, err
 			}
-			all = append(all, from)
+			all = append(all, to)
 		}
-	} else if dur.Repeat == 0 && dur.Until != "" {
-		var f, u time.Time
-		var err error
-
-		until := ConvertRelativeDateToActual(dur.Until)
-		p, err := parsetime.NewParseTime()
+	default: // until
+		u, err := parseDateTime(ConvertRelativeDateToActual(dur.Until))
 		if err != nil {
 			return nil, err
 		}
-		u, err = p.Parse(until)
-		if err != nil {
-			return nil, err
-		}
-
-		from := ConvertRelativeDateToActual(dur.From)
-		for {
-			from, err = calculate(from, dur.Period, op)
+		to := from
+		for i := 0; ; i++ {
+			if i >= maxUntilIterations {
+				return nil, fmt.Errorf("until would produce more than %d results", maxUntilIterations)
+			}
+			next, err := applyPeriod(to, periodMatches, op)
 			if err != nil {
 				return nil, err
 			}
-
-			p, err := parsetime.NewParseTime()
-			if err != nil {
-				return nil, err
+			if next.StdTime().Equal(to.StdTime()) {
+				return nil, fmt.Errorf("duration %q does not advance toward the until date/time", dur.Period)
 			}
-			f, err = p.Parse(from)
-			if err != nil {
-				return nil, err
-			}
-
+			to = next
 			if Add == op {
-				if f.After(u) {
+				if to.StdTime().After(u) {
 					break
 				}
 			} else {
-				if f.Before(u) {
+				if to.StdTime().Before(u) {
 					break
 				}
 			}
-			all = append(all, from)
+			all = append(all, to)
 		}
 	}
+	return dur.renderResults(all)
+}
 
-	if len(dur.OutputFormat) > 0 && len(all) > 0 {
-		var allWithFormat []string
-		for _, a := range all {
-			formatted, err := dur.setOutputFormat(a)
-			if err != nil {
-				return nil, err
-			}
-			allWithFormat = append(allWithFormat, formatted)
+// renderResults converts computed date/times to strings, applying the
+// optional strftime output format which also supports the unix time %s modifier
+func (dur *Dur) renderResults(all []carbon.Carbon) ([]string, error) {
+	rendered := make([]string, 0, len(all))
+	if len(dur.OutputFormat) == 0 {
+		for _, c := range all {
+			rendered = append(rendered, c.ToString())
 		}
-		return allWithFormat, nil
+		return rendered, nil
 	}
-	return all, nil
+	f, err := strftime.New(dur.OutputFormat, strftime.WithUnixSeconds('s'))
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range all {
+		rendered = append(rendered, f.FormatString(c.StdTime()))
+	}
+	return rendered, nil
 }
 
-// setOutputFormat use a strftime format string for the output date/time
-func (dur *Dur) setOutputFormat(arg string) (string, error) {
-	f, err := strftime.New(dur.OutputFormat)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	p, err := parsetime.NewParseTime()
-	if err != nil {
-		return "", err
-	}
-	s, err := p.Parse(arg)
-	if err != nil {
-		return "", err
-	}
-	output := f.FormatString(s)
-	return output, nil
-}
-
-// calculate given a from date and period duration, compute a new date/time
-// when index==0, then add; when index==1, then subtract
-func calculate(from, period string, index int) (string, error) {
-	periodMatches := expandedRegexp.FindAllStringSubmatch(period, -1)
-	if len(periodMatches) == 0 {
+// parsePeriod parses a period in either long or brief format into
+// (amount, unit) pairs, erroring if any part of the period is not understood
+func parsePeriod(period string) ([][2]string, error) {
+	indexes := expandedRegexp.FindAllStringSubmatchIndex(period, -1)
+	if len(indexes) == 0 {
 		// brief format is being used so first expand it to the long format
-		period, err := expandPeriod(period)
+		var err error
+		period, err = expandPeriod(period)
 		if nil != err {
-			return "", fmt.Errorf("%v", err)
+			return nil, err
 		}
-		periodMatches = expandedRegexp.FindAllStringSubmatch(period, -1)
-		if len(periodMatches) == 0 {
-			return "", fmt.Errorf("[validatePeriod] Invalid duration: %s", period)
+		indexes = expandedRegexp.FindAllStringSubmatchIndex(period, -1)
+		if len(indexes) == 0 {
+			return nil, fmt.Errorf("[parsePeriod] Invalid duration: %s", period)
 		}
 	}
 
-	from = ConvertRelativeDateToActual(from)
-	p, err := parsetime.NewParseTime()
-	if err != nil {
-		return "", err
+	// every character must belong to a match, otherwise part of the
+	// period, such as the "2m" in "1 hour 2m", would be silently ignored
+	var matches [][2]string
+	var leftover strings.Builder
+	prev := 0
+	for _, m := range indexes {
+		leftover.WriteString(period[prev:m[0]])
+		prev = m[1]
+		matches = append(matches, [2]string{period[m[2]:m[3]], period[m[4]:m[5]]})
 	}
-	f, err := p.Parse(from)
-	if err != nil {
-		return "", err
+	leftover.WriteString(period[prev:])
+	if remains := strings.TrimSpace(leftover.String()); remains != "" {
+		return nil, fmt.Errorf("[parsePeriod] Invalid duration %q in: %s. %s", remains, period, hintMsg)
 	}
-
-	to := carbon.CreateFromStdTime(f)
-	if to.Error != nil {
-		return "", to.Error
-	}
-	err = validatePeriod(period)
-	if err != nil {
-		return "", err
-	}
-
-	for i := range periodMatches {
-		amount := periodMatches[i][1]
-		num, err := strconv.Atoi(amount)
-		if err != nil {
-			return "", err
-		}
-		word := periodMatches[i][2]
-		to = carbonFuncs[removeTrailingS(word)].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, num)
-		// fmt.Printf("    to: %v | %v | %v\n", num, word, to)
-	}
-	return to.ToString(), nil
+	return matches, nil
 }
 
-// validatePeriod ensure all words in "period" are a valid time duration
-func validatePeriod(period string) error {
-	wordsOnlyRe := regexp.MustCompile(wordsOnly)
-	matches := wordsOnlyRe.FindAllString(period, -1)
-	for _, word := range matches {
-		// fmt.Println("word:", word)
-		_, ok := carbonFuncs[removeTrailingS(word)]
-		if !ok {
-			return fmt.Errorf("[validatePeriod] Invalid period: %s", word)
+// applyPeriod applies each (amount, unit) pair of a parsed period to a date/time
+// when index==0, then add; when index==1, then subtract
+// the integer part of an amount uses carbon's calendar-aware functions; any
+// fractional part is applied as nanoseconds
+func applyPeriod(to carbon.Carbon, periodMatches [][2]string, index int) (carbon.Carbon, error) {
+	for _, match := range periodMatches {
+		amount, word := match[0], removeTrailingS(match[1])
+		value, err := strconv.ParseFloat(amount, 64)
+		if err != nil {
+			return to, err
+		}
+		if value > math.MaxInt32 {
+			return to, fmt.Errorf("amount too large: %s", amount)
+		}
+		whole, frac := math.Modf(value)
+		to = carbonFuncs[word].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, int(whole))
+		if frac > 0 {
+			ns := int(math.Round(frac * unitNanoseconds[word]))
+			to = carbonFuncs["nanosecond"].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, ns)
+		}
+		if to.Error != nil {
+			return to, to.Error
 		}
 	}
-	return nil
+	return to, nil
 }
 
 // expandPeriod convert a brief style period into a long period
