@@ -41,12 +41,14 @@ var diffCmd = &cobra.Command{
 var optDiffBrief bool
 var optDiffReadFromStdin bool
 var optDiffConv string
+var optDiffDecimals int
 
 func init() {
 	rootCmd.AddCommand(diffCmd)
 	diffCmd.Flags().BoolVarP(&optDiffBrief, "brief", "b", false, "output in brief format, such as: 1Y2M3D4h5m6s7ms8us9ns")
 	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read from STDIN instead of using -s/-e")
 	diffCmd.Flags().StringVarP(&optDiffConv, "conv", "c", "", "convert resulting duration to another group of units")
+	diffCmd.Flags().IntVarP(&optDiffDecimals, "decimals", "d", 0, "with -c: show the smallest unit with this many decimal places, rounded")
 }
 
 // either read one line containing a comma, then split start and end on this
@@ -69,8 +71,8 @@ func getInput() (string, string) {
 }
 
 // convert duration from one group of units to another
-func convDuration(source, target string, brief bool) string {
-	conv := DateTimeMate.NewConv(DateTimeMate.ConvWithSource(source), DateTimeMate.ConvWithTarget(target), DateTimeMate.ConvWithBrief(brief))
+func convDuration(source, target string, brief bool, decimals int) string {
+	conv := DateTimeMate.NewConv(DateTimeMate.ConvWithSource(source), DateTimeMate.ConvWithTarget(target), DateTimeMate.ConvWithBrief(brief), DateTimeMate.ConvWithDecimals(decimals))
 	result, err := conv.ConvertDuration()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -81,6 +83,10 @@ func convDuration(source, target string, brief bool) string {
 
 // outputDiff compute the duration between two dates, times, and/or date/times
 func outputDiff(start, end string, brief bool) {
+	if optDiffDecimals != 0 && optDiffConv == "" {
+		fmt.Fprintln(os.Stderr, "-d/--decimals requires -c/--conv")
+		os.Exit(1)
+	}
 	diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), DateTimeMate.DiffWithBrief(brief))
 	result, _, err := diff.CalculateDiff()
 	if err != nil {
@@ -88,7 +94,7 @@ func outputDiff(start, end string, brief bool) {
 		os.Exit(1)
 	}
 	if optDiffConv != "" {
-		result = convDuration(result, optDiffConv, optDiffBrief)
+		result = convDuration(result, optDiffConv, optDiffBrief, optDiffDecimals)
 	}
 	if optRootNoNewline {
 		fmt.Print(result)

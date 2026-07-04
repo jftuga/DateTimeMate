@@ -185,6 +185,8 @@ Conversions:
 Months are not a unit since their lengths vary between 28 and 31 days
 Separate sub-second brief units with a dot
 example: dtmate conv 4321s123456789ns hms.msusns
+Use -d to show the smallest unit with decimal places, rounded
+example: dtmate diff 2023-10-17 2026-07-04 -c Y -d 2  =>  2.71 years
 ```
 
 </details>
@@ -233,6 +235,11 @@ $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00
 # same input, also convert duration to minutes and seconds
 $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00 -c ms
 305 minutes 5 seconds
+
+# convert to a single unit, showing 2 decimal places
+# without -d, this would truncate to just: 2 years
+$ dtmate diff 2023-10-17 2026-07-04 -c Y -d 2
+2.71 years
 
 # differentiate sub-second durations with a dot
 # note the "ms" on both sides of the dot: minutes & seconds vs milliseconds
@@ -324,6 +331,10 @@ $ dtmate conv 25771401s WDhms
 # another conversion, in the opposite direction, brief output
 $ dtmate conv 42W4D6h43m21s seconds -b
 25771401s
+
+# show the smallest unit with decimal places, rounded
+$ dtmate conv "1 hour 30 minutes" hours -d 1
+1.5 hours
 
 ########################### "dtmate fmt" examples ###########################
 

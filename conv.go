@@ -42,9 +42,10 @@ var unitBriefMap = map[string]string{
 }
 
 type Conv struct {
-	Source string
-	Target string
-	Brief  bool
+	Source   string
+	Target   string
+	Brief    bool
+	Decimals int
 }
 
 type OptionsConv func(*Conv)
@@ -75,8 +76,16 @@ func ConvWithBrief(brief bool) OptionsConv {
 	}
 }
 
+// ConvWithDecimals sets the number of decimal places used when formatting
+// the last (smallest) target unit; 0 keeps the default integer truncation
+func ConvWithDecimals(decimals int) OptionsConv {
+	return func(conv *Conv) {
+		conv.Decimals = decimals
+	}
+}
+
 func (conv *Conv) String() string {
-	return fmt.Sprintf("Source:%v Target:%v Brief:%v", conv.Source, conv.Target, conv.Brief)
+	return fmt.Sprintf("Source:%v Target:%v Brief:%v Decimals:%v", conv.Source, conv.Target, conv.Brief, conv.Decimals)
 }
 
 // parseSource parses the Source field of the Conv struct
@@ -121,21 +130,36 @@ func (conv *Conv) parseSource() (float64, error) {
 // each unit as appropriate. It builds a string representation, including only non-zero
 // values. The function handles singular and plural forms of the units.
 //
+// When Conv.Decimals is greater than zero, the last (smallest) unit is formatted with
+// that many decimal places, rounded, and is always included even when less than one.
+//
 // Returns:
 //   - string: A formatted string representing the duration using the specified units.
 //     For example: "2 hours 30 minutes 45 seconds"
 func (conv *Conv) formatTarget(seconds float64, units []string) string {
 	result := ""
-	for _, unit := range units {
+	for i, unit := range units {
 		unitInSeconds := unitMap[strings.TrimSuffix(unit, "s")]
 		value := seconds / unitInSeconds
-		intValue := int(value)
+		unit = removeTrailingS(unit)
 
+		if conv.Decimals > 0 && i == len(units)-1 {
+			if value < 0 { // guard against float underflow producing "-0.00"
+				value = 0
+			}
+			formatted := strconv.FormatFloat(value, 'f', conv.Decimals, 64)
+			if rounded, _ := strconv.ParseFloat(formatted, 64); rounded != 1 {
+				unit += "s"
+			}
+			result += fmt.Sprintf("%s %s ", formatted, unit)
+			continue
+		}
+
+		intValue := int(value)
 		if intValue <= 0 {
 			continue
 		}
 
-		unit = removeTrailingS(unit)
 		if intValue > 1 {
 			unit += "s"
 		}
@@ -217,6 +241,9 @@ func expandBriefTargetDuration(period string) ([]string, error) {
 //   - error: An error if any step of the conversion process fails.
 func (conv *Conv) ConvertDuration() (string, error) {
 	var err error
+	if conv.Decimals < 0 || conv.Decimals > 9 {
+		return "", fmt.Errorf("decimals must be between 0 and 9: %d", conv.Decimals)
+	}
 	isNegativeDuration := false
 	if s, found := strings.CutPrefix(conv.Source, "-"); found {
 		conv.Source = s
