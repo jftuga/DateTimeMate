@@ -155,10 +155,6 @@ func FormatUTCOffset(seconds int) string {
 	return fmt.Sprintf("%s%02d:%02d", sign, seconds/3600, (seconds%3600)/60)
 }
 
-// wallClockLayouts are tried before falling back to parsetime because
-// parsetime silently corrupts pre-1970 date/times
-var wallClockLayouts = []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02"}
-
 // parseSourceTime parses a date/time string; when the last field names a
 // resolvable time zone, the preceding wall clock is interpreted in that
 // zone, otherwise the whole string is parsed as a local date/time
@@ -179,11 +175,6 @@ func (c *TimeZoneConverter) parseSourceTime(input string) (time.Time, error) {
 				}
 				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
 			}
-		}
-	}
-	for _, layout := range wallClockLayouts {
-		if t, err := time.ParseInLocation(layout, input, time.Local); err == nil {
-			return t, nil
 		}
 	}
 	return parseDateTime(ConvertRelativeDateToActual(input))
