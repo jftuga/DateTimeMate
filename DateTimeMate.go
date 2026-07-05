@@ -21,7 +21,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.11.0"
+	ModVersion string = "1.12.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -96,18 +96,73 @@ func fixLocalZone(t time.Time) time.Time {
 	return t
 }
 
-// parseDateTime parses a date/time string with parsetime, correcting the
-// DST offset of zone-less strings via fixLocalZone
+// wallClockLayouts are zone-less layouts interpreted in the local time
+// zone; they are tried before parsetime because parsetime silently
+// corrupts pre-1970 date/times
+var wallClockLayouts = []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02"}
+
+// zonedLayouts carry their own zone or offset, which must be preserved in
+// the result (e.g. reformatting "...Z" with %Z must print UTC, not local)
+var zonedLayouts = []string{time.RFC3339Nano, "2006-01-02 15:04:05 -0700 MST", "2006-01-02 15:04:05 -0700", "2006-01-02 15:04:05 MST", time.UnixDate, time.RFC1123Z, time.RFC1123, time.RubyDate}
+
+// parseDateTime parses a date/time string: standard layouts are tried
+// first because they preserve explicit zones and handle any year, then
+// parsetime (with fixLocalZone correcting the DST offset of zone-less
+// strings), and finally carbon; parsetime results naming a year that does
+// not appear in the input are rejected as corrupt rather than returned
 func parseDateTime(source string) (time.Time, error) {
+	for _, layout := range wallClockLayouts {
+		if t, err := time.ParseInLocation(layout, source, time.Local); err == nil {
+			return t, nil
+		}
+	}
+	for _, layout := range zonedLayouts {
+		if t, err := time.Parse(layout, source); err == nil {
+			return t, nil
+		}
+	}
 	p, err := parsetime.NewParseTime()
 	if err != nil {
 		return time.Time{}, err
 	}
 	t, err := p.Parse(source)
-	if err != nil {
-		return time.Time{}, err
+	if err == nil && !parsedYearMismatch(source, t) {
+		return fixLocalZone(t), nil
 	}
-	return fixLocalZone(t), nil
+	if c := carbon.Parse(source); c.Error == nil {
+		return c.StdTime(), nil
+	}
+	if err == nil {
+		return time.Time{}, fmt.Errorf("refusing unreliable parse of %q: result year %d does not appear in the input", source, t.Year())
+	}
+	return time.Time{}, err
+}
+
+// parsedYearMismatch reports whether the input names a year (a standalone
+// 4-digit run between 1000 and 2999, not preceded by a '.' as fractional
+// seconds would be) that the parsed result does not match; parsetime
+// signals corruption this way instead of returning an error
+func parsedYearMismatch(source string, t time.Time) bool {
+	sawYear := false
+	digits := 0
+	for i := 0; i <= len(source); i++ {
+		if i < len(source) && source[i] >= '0' && source[i] <= '9' {
+			digits++
+			continue
+		}
+		if digits == 4 {
+			start := i - digits
+			year, _ := strconv.Atoi(source[start:i])
+			if year >= 1000 && year <= 2999 && (start == 0 || source[start-1] != '.') {
+				if year == t.Year() {
+					return false
+				}
+				sawYear = true
+			}
+		}
+		digits = 0
+	}
+	return sawYear
 }
 
 // Reformat converts a date/time string into a specified format. The source can be:

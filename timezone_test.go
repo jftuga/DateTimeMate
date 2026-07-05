@@ -1,0 +1,890 @@
+package DateTimeMate
+
+import (
+	"fmt"
+	"slices"
+	"testing"
+	"time"
+	_ "time/tzdata"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func setupConverter() *TimeZoneConverter {
+	return NewTimeZoneConverter(TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()))
+}
+
+func TestTimezoneBasicConversions(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "UTC to EST",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "EST",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "PST to JST",
+			sourceTime: "2024-01-15 09:00:00 PST",
+			targetZone: "JST",
+			expected:   "2024-01-16 02:00:00 JST",
+		},
+		{
+			name:       "EST to GMT",
+			sourceTime: "2024-01-15 17:30:00 EST",
+			targetZone: "GMT",
+			expected:   "2024-01-15 22:30:00 GMT",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneHalfHourOffsets(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "UTC to India (UTC+5:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "IST",
+			expected:   "2024-01-15 17:30:00 IST",
+		},
+		{
+			name:       "UTC to India (UTC+5:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Kolkata",
+			expected:   "2024-01-15 17:30:00 IST",
+		},
+		{
+			name:       "UTC to Iran (UTC+3:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "IRST",
+			expected:   "2024-01-15 15:30:00 IRST",
+		},
+		{
+			name:       "UTC to Iran (UTC+3:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Tehran",
+			expected:   "2024-01-15 15:30:00 +0330",
+		},
+		{
+			name:       "UTC to Newfoundland (UTC-3:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "NST",
+			expected:   "2024-01-15 08:30:00 NST",
+		},
+		{
+			name:       "UTC to Afghanistan (UTC+4:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "AFT",
+			expected:   "2024-01-15 16:30:00 AFT",
+		},
+		{
+			name:       "UTC to Afghanistan (UTC+4:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Kabul",
+			expected:   "2024-01-15 16:30:00 +0430",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneQuarterHourOffsets(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "UTC to Nepal (UTC+5:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "NPT",
+			expected:   "2024-01-15 17:45:00 NPT",
+		},
+		{
+			name:       "UTC to Nepal (UTC+5:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Kathmandu",
+			expected:   "2024-01-15 17:45:00 +0545",
+		},
+		{
+			name:       "UTC to Chatham Islands (UTC+12:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "CHAST",
+			expected:   "2024-01-16 00:45:00 CHAST",
+		},
+		{
+			name:       "UTC to Chatham Islands (UTC+12:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Pacific/Chatham",
+			expected:   "2024-01-16 01:45:00 +1345", // January is Chatham daylight time (UTC+13:45)
+		},
+		{
+			name:       "UTC to Eucla Australia (UTC+8:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "ACWST",
+			expected:   "2024-01-15 20:45:00 ACWST",
+		},
+		{
+			name:       "UTC to Eucla Australia (UTC+8:45)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Australia/Eucla",
+			expected:   "2024-01-15 20:45:00 +0845",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneSpecialCases(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Arizona (No DST)",
+			sourceTime: "2024-07-15 12:00:00 UTC", // Summer
+			targetZone: "MST",
+			expected:   "2024-07-15 05:00:00 MST",
+		},
+		{
+			name:       "Arizona (No DST)",
+			sourceTime: "2024-07-15 12:00:00 UTC", // Summer
+			targetZone: "America/Phoenix",
+			expected:   "2024-07-15 05:00:00 MST",
+		},
+		{
+			name:       "Indiana (Eastern Time)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "EST",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Indiana (Eastern Time)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Indianapolis",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Lord Howe Island (UTC+10:30/+11)",
+			sourceTime: "2024-01-15 12:00:00 UTC", // Summer
+			targetZone: "LHDT",
+			expected:   "2024-01-15 23:00:00 LHDT",
+		},
+		{
+			name:       "Lord Howe Island (UTC+10:30/+11)",
+			sourceTime: "2024-01-15 12:00:00 UTC", // Summer
+			targetZone: "Australia/Lord_Howe",
+			expected:   "2024-01-15 23:00:00 +11", // January is Lord Howe daylight time (UTC+11)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneNumericOffsets(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "UTC to +0530",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "19800", // +5:30 in seconds
+			expected:   "2024-01-15 17:30:00 UTC+5",
+		},
+		{
+			name:       "UTC to -0930",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "-34200", // -9:30 in seconds
+			expected:   "2024-01-15 02:30:00 UTC-9",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneErrorCases(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+	}{
+		{
+			name:       "Invalid source time format",
+			sourceTime: "2024-13-45 99:99:99 XYZ",
+			targetZone: "UTC",
+		},
+		{
+			name:       "Unknown timezone",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "INVALID_TZ",
+		},
+		{
+			name:       "Invalid offset value",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "999999",
+		},
+		{
+			name:       "Empty input",
+			sourceTime: "",
+			targetZone: "UTC",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestTimezoneHistorical(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Pre-2000 Israel",
+			sourceTime: "1995-01-01 12:00:00 UTC",
+			targetZone: "Asia/Jerusalem",
+			expected:   "1995-01-01 14:00:00 IST",
+		},
+		{
+			name:       "1985 Eastern Australia",
+			sourceTime: "1985-01-01 12:00:00 UTC",
+			targetZone: "Australia/Sydney",
+			expected:   "1985-01-01 23:00:00 AEDT", // January is daylight time in Sydney
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneExoticLocations(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Kiritimati (Christmas Island, UTC+14)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Pacific/Kiritimati",
+			expected:   "2024-01-16 02:00:00 +14",
+		},
+		{
+			name:       "Baker Island (UTC-12)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Etc/GMT+12",
+			expected:   "2024-01-15 00:00:00 -12", // Etc/GMT+12 uses the POSIX-inverted sign; its abbreviation is -12
+		},
+		{
+			name:       "Tonga (UTC+13)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Pacific/Tongatapu",
+			expected:   "2024-01-16 01:00:00 +13",
+		},
+		{
+			name:       "Marquesas Islands (UTC-9:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Pacific/Marquesas",
+			expected:   "2024-01-15 02:30:00 -0930",
+		},
+		{
+			name:       "Cocos Islands (UTC+6:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Indian/Cocos",
+			expected:   "2024-01-15 18:30:00 +0630",
+		},
+		{
+			name:       "Myanmar (UTC+6:30)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Yangon",
+			expected:   "2024-01-15 18:30:00 +0630",
+		},
+		{
+			name:       "American Samoa (UTC-11)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "SST",
+			expected:   "2024-01-15 01:00:00 SST",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneAliases(t *testing.T) {
+	aliases, err := ParseZoneAliases("IST=Asia/Jerusalem| cst = Asia/Shanghai ")
+	assert.NoError(t, err)
+	conv := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAliases(aliases))
+
+	// aliases beat the built-in abbreviation map and stay DST aware:
+	// Jerusalem observes IDT in July
+	result, err := conv.ConvertTimeZone("2024-07-15 12:00:00 UTC", "IST")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-07-15 15:00:00 IDT", result.Format("2006-01-02 15:04:05 MST"))
+
+	result, err = conv.ConvertTimeZone("2024-01-15 12:00:00 UTC", "CST")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-01-15 20:00:00 CST", result.Format("2006-01-02 15:04:05 MST"))
+
+	// aliases also apply to the source zone
+	result, err = conv.ConvertTimeZone("2024-01-15 20:00:00 CST", "UTC")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-01-15 12:00:00 UTC", result.Format("2006-01-02 15:04:05 MST"))
+}
+
+func TestTimezoneParseZoneAliases(t *testing.T) {
+	aliases, err := ParseZoneAliases("")
+	assert.NoError(t, err)
+	assert.Empty(t, aliases)
+
+	_, err = ParseZoneAliases("IST=Not/AZone")
+	assert.Error(t, err)
+
+	_, err = ParseZoneAliases("garbage")
+	assert.Error(t, err)
+
+	_, err = ParseZoneAliases("=Asia/Tokyo")
+	assert.Error(t, err)
+}
+
+func TestTimezoneWarnings(t *testing.T) {
+	conv := setupConverter()
+
+	warnings := conv.Warnings("2024-01-15 12:00:00 UTC", "IST")
+	if assert.Len(t, warnings, 1) {
+		assert.Contains(t, warnings[0], "IST is ambiguous")
+		assert.Contains(t, warnings[0], ZoneAliasesEnvVar)
+	}
+
+	// ambiguous source zone also warns, but the same zone on both
+	// sides only warns once
+	assert.Len(t, conv.Warnings("2024-01-15 12:00:00 CST", "UTC"), 1)
+	assert.Len(t, conv.Warnings("2024-01-15 12:00:00 CST", "CST"), 1)
+
+	// unambiguous zones do not warn
+	assert.Empty(t, conv.Warnings("2024-01-15 12:00:00 UTC", "JST"))
+
+	// an alias resolves the ambiguity, so no warning
+	aliases, err := ParseZoneAliases("IST=Asia/Jerusalem")
+	assert.NoError(t, err)
+	aliased := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAliases(aliases))
+	assert.Empty(t, aliased.Warnings("2024-01-15 12:00:00 UTC", "IST"))
+}
+
+func TestListIANAZones(t *testing.T) {
+	zones := ListIANAZones()
+	// the database has ~600 zones; a low floor keeps this robust across
+	// tzdata releases while still catching a broken or empty list
+	assert.Greater(t, len(zones), 400)
+	for _, name := range []string{"America/New_York", "Europe/Paris", "Europe/London", "Asia/Kolkata", "UTC"} {
+		assert.Contains(t, zones, name)
+	}
+	assert.True(t, slices.IsSorted(zones))
+	// every returned name must resolve
+	for _, name := range zones {
+		if _, err := time.LoadLocation(name); err != nil {
+			t.Fatalf("zone %q does not resolve: %v", name, err)
+		}
+	}
+}
+
+func TestTimezonePre1970(t *testing.T) {
+	conv := setupConverter()
+
+	_, err := conv.ConvertTimeZone("1900-02-28 23:59:59 UTC", "Europe/London")
+	assert.ErrorIs(t, err, ErrPre1970)
+
+	// zone-less pre-1970 date/times must also be rejected
+	_, err = conv.ConvertTimeZone("1950-01-01 12:00:00", "UTC")
+	assert.ErrorIs(t, err, ErrPre1970)
+
+	forced := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAllowPre1970(true))
+	result, err := forced.ConvertTimeZone("1900-02-28 23:59:59 UTC", "Europe/London")
+	assert.NoError(t, err)
+	assert.Equal(t, "1900-02-28 23:59:59 GMT", result.Format("2006-01-02 15:04:05 MST"))
+}
+
+func TestTimezoneBoundaryConditions(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Year 2038 Problem",
+			sourceTime: "2038-01-19 03:14:07 UTC",
+			targetZone: "America/New_York",
+			expected:   "2038-01-18 22:14:07 EST",
+		},
+		{
+			name:       "Year 2100 Non-Leap Year",
+			sourceTime: "2100-02-28 23:59:59 UTC",
+			targetZone: "Europe/Paris",
+			expected:   "2100-03-01 00:59:59 CET",
+		},
+		{
+			name:       "Unix Epoch Start",
+			sourceTime: "1970-01-01 00:00:00 UTC",
+			targetZone: "America/Los_Angeles",
+			expected:   "1969-12-31 16:00:00 PST",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneDSTEdgeCases(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Ambiguous Fall Back Time",
+			sourceTime: "2024-11-03 01:30:00 EDT",
+			targetZone: "America/New_York",
+			expected:   "2024-11-03 01:30:00 EDT",
+		},
+		{
+			name:       "Spring Forward Skip",
+			sourceTime: "2024-03-10 02:30:00 EST",
+			targetZone: "America/New_York",
+			expected:   "2024-03-10 03:30:00 EDT",
+		},
+		{
+			name:       "Southern Hemisphere DST Start",
+			sourceTime: "2024-09-29 01:59:59 AEST",
+			targetZone: "Australia/Sydney",
+			expected:   "2024-09-29 01:59:59 AEST",
+		},
+		{
+			// IST is ambiguous (the abbreviation map resolves it to India),
+			// so probe Israel's variable DST from unambiguous UTC sources
+			name:       "Israel Before Variable DST Start",
+			sourceTime: "2024-03-28 12:00:00 UTC",
+			targetZone: "Asia/Jerusalem",
+			expected:   "2024-03-28 14:00:00 IST",
+		},
+		{
+			name:       "Israel After Variable DST Start",
+			sourceTime: "2024-03-29 12:00:00 UTC",
+			targetZone: "Asia/Jerusalem",
+			expected:   "2024-03-29 15:00:00 IDT",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func BenchmarkTimeConversion(b *testing.B) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+	}{
+		{"Simple", "2024-01-15 12:00:00 UTC", "EST"},
+		{"Complex", "2024-03-10 02:30:00 EST", "Australia/Lord_Howe"},
+		{"Historical", "1940-01-15 12:00:00 UTC", "Asia/Shanghai"},
+		{"DST Transition", "2024-03-10 02:00:00 EST", "America/New_York"},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func TestTimezoneParallelConversion(t *testing.T) {
+	conv := setupConverter()
+	t.Run("Parallel", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < 100; i++ {
+			sourceTime := fmt.Sprintf("2024-01-15 %02d:00:00 UTC", i%24)
+			_, err := conv.ConvertTimeZone(sourceTime, "Asia/Tokyo")
+			assert.NoError(t, err)
+		}
+	})
+}
+func TestTimezoneSpecificRegionalCases(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		// Indiana Counties
+		{
+			name:       "Indiana - Knox County",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Knox",
+			expected:   "2024-01-15 06:00:00 CST",
+		},
+		{
+			name:       "Indiana - Marengo",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Marengo",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Indiana - Petersburg",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Petersburg",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Indiana - Tell City",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Tell_City",
+			expected:   "2024-01-15 06:00:00 CST",
+		},
+		{
+			name:       "Indiana - Vevay",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Vevay",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Indiana - Vincennes",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Vincennes",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Indiana - Winamac",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "America/Indiana/Winamac",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+
+		// Arizona Regions
+		{
+			name:       "Arizona - Phoenix (No DST)",
+			sourceTime: "2024-07-15 12:00:00 UTC",
+			targetZone: "America/Phoenix",
+			expected:   "2024-07-15 05:00:00 MST",
+		},
+		{
+			name:       "Arizona - Navajo Nation (Uses DST)",
+			sourceTime: "2024-07-15 12:00:00 UTC",
+			targetZone: "America/Shiprock",
+			expected:   "2024-07-15 06:00:00 MDT",
+		},
+
+		// Antarctica Research Stations
+		{
+			name:       "Antarctica - McMurdo",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/McMurdo",
+			expected:   "2024-01-16 01:00:00 NZDT",
+		},
+		{
+			name:       "Antarctica - Casey",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/Casey",
+			expected:   "2024-01-15 20:00:00 +08", // Casey moved to UTC+8 in March 2023
+		},
+		{
+			name:       "Antarctica - Davis",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/Davis",
+			expected:   "2024-01-15 19:00:00 +07",
+		},
+		{
+			name:       "Antarctica - DumontDUrville",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/DumontDUrville",
+			expected:   "2024-01-15 22:00:00 +10",
+		},
+		{
+			name:       "Antarctica - Syowa",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/Syowa",
+			expected:   "2024-01-15 15:00:00 +03",
+		},
+		{
+			name:       "Antarctica - Troll",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Antarctica/Troll",
+			expected:   "2024-01-15 12:00:00 +00", // Troll is UTC+0 outside its March-October +02 period
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezoneFormatVariations(t *testing.T) {
+	conv := setupConverter()
+	sourceTime := "2024-01-15 12:00:00 UTC"
+	targetZone := "America/New_York"
+
+	formats := []struct {
+		name     string
+		format   string
+		expected string
+	}{
+		{
+			name:     "RFC3339",
+			format:   time.RFC3339,
+			expected: "2024-01-15T07:00:00-05:00",
+		},
+		{
+			name:     "RFC822",
+			format:   time.RFC822,
+			expected: "15 Jan 24 07:00 EST",
+		},
+		{
+			name:     "RFC850",
+			format:   time.RFC850,
+			expected: "Monday, 15-Jan-24 07:00:00 EST",
+		},
+		{
+			name:     "RFC1123",
+			format:   time.RFC1123,
+			expected: "Mon, 15 Jan 2024 07:00:00 EST",
+		},
+		{
+			name:     "Kitchen",
+			format:   time.Kitchen,
+			expected: "7:00AM",
+		},
+		{
+			name:     "ANSIC",
+			format:   time.ANSIC,
+			expected: "Mon Jan 15 07:00:00 2024",
+		},
+		{
+			name:     "UnixDate",
+			format:   time.UnixDate,
+			expected: "Mon Jan 15 07:00:00 EST 2024",
+		},
+		{
+			name:     "RubyDate",
+			format:   time.RubyDate,
+			expected: "Mon Jan 15 07:00:00 -0500 2024",
+		},
+	}
+
+	for _, tf := range formats {
+		t.Run(tf.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(sourceTime, targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tf.expected, result.Format(tf.format))
+		})
+	}
+}
+
+func TestTimezoneTimezoneAbbreviationNormalization(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Mixed Case EST",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "eSt",
+			expected:   "2024-01-15 07:00:00 EST",
+		},
+		{
+			name:       "Lower Case pst",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "pst",
+			expected:   "2024-01-15 04:00:00 PST",
+		},
+		{
+			name:       "Mixed Case JsT",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "JsT",
+			expected:   "2024-01-15 21:00:00 JST",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
+
+func TestTimezonePropertyBasedTimezones(t *testing.T) {
+	conv := setupConverter()
+
+	// Test that converting to UTC and back preserves the original time
+	t.Run("UTC Roundtrip", func(t *testing.T) {
+		original := "2024-01-15 12:34:56 EST"
+		intermediate, err := conv.ConvertTimeZone(original, "UTC")
+		assert.NoError(t, err)
+
+		result, err := conv.ConvertTimeZone(intermediate.Format("2006-01-02 15:04:05 MST"), "EST")
+		assert.NoError(t, err)
+		assert.Equal(t, original, result.Format("2006-01-02 15:04:05 MST"))
+	})
+
+	// Test that consecutive conversions are consistent
+	t.Run("Conversion Chain", func(t *testing.T) {
+		zones := []string{"UTC", "EST", "PST", "JST", "UTC"}
+		testTime := "2024-01-15 12:00:00 UTC"
+		var err error
+		var result time.Time
+
+		for i := 1; i < len(zones); i++ {
+			result, err = conv.ConvertTimeZone(testTime, zones[i])
+			assert.NoError(t, err)
+		}
+
+		// Should be back to original UTC time
+		assert.Equal(t, "2024-01-15 12:00:00 UTC", result.Format("2006-01-02 15:04:05 MST"))
+	})
+}
+
+func BenchmarkComplexScenarios(b *testing.B) {
+	conv := setupConverter()
+	scenarios := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+	}{
+		{
+			name:       "DST Transition",
+			sourceTime: "2024-03-10 02:00:00 EST",
+			targetZone: "America/New_York",
+		},
+		{
+			name:       "Leap Second",
+			sourceTime: "2016-12-31 23:59:59 UTC",
+			targetZone: "Asia/Tokyo",
+		},
+		{
+			name:       "Historical Date",
+			sourceTime: "1900-01-01 12:00:00 GMT",
+			targetZone: "America/New_York",
+		},
+		{
+			name:       "Quarter Hour Offset",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "Asia/Kathmandu",
+		},
+	}
+
+	for _, s := range scenarios {
+		b.Run(s.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := conv.ConvertTimeZone(s.sourceTime, s.targetZone)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

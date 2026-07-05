@@ -159,6 +159,17 @@ func TestDiffYearOverflow(t *testing.T) {
 	}
 }
 
+func TestDiffPre1970(t *testing.T) {
+	t.Parallel()
+	// both sides before 1970
+	testDiffStartEnd(t, "1950-01-01 12:00:00", "1950-01-02 13:30:00", false, "1 day 1 hour 30 minutes")
+	testDiffStartEnd(t, "1950-01-01 12:00:00", "1950-01-02 13:30:00", true, "1D1h30m")
+	// pre-1970 with explicit zones
+	testDiffStartEnd(t, "1950-06-07T08:00:00Z", "1950-06-07T09:02:03Z", false, "1 hour 2 minutes 3 seconds")
+	// crossing the unix epoch
+	testDiffStartEnd(t, "1969-12-31 23:00:00", "1970-01-01 01:00:00", false, "2 hours")
+}
+
 func TestDiffRelativeStartEnd(t *testing.T) {
 	t.Parallel()
 	start := "yesterday"
