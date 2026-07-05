@@ -2,6 +2,7 @@ package DateTimeMate
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 	_ "time/tzdata"
@@ -533,6 +534,23 @@ func TestTimezoneWarnings(t *testing.T) {
 		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
 		TimeZoneConverterWithAliases(aliases))
 	assert.Empty(t, aliased.Warnings("2024-01-15 12:00:00 UTC", "IST"))
+}
+
+func TestListIANAZones(t *testing.T) {
+	zones := ListIANAZones()
+	// the database has ~600 zones; a low floor keeps this robust across
+	// tzdata releases while still catching a broken or empty list
+	assert.Greater(t, len(zones), 400)
+	for _, name := range []string{"America/New_York", "Europe/Paris", "Europe/London", "Asia/Kolkata", "UTC"} {
+		assert.Contains(t, zones, name)
+	}
+	assert.True(t, slices.IsSorted(zones))
+	// every returned name must resolve
+	for _, name := range zones {
+		if _, err := time.LoadLocation(name); err != nil {
+			t.Fatalf("zone %q does not resolve: %v", name, err)
+		}
+	}
 }
 
 func TestTimezonePre1970(t *testing.T) {

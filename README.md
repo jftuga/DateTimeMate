@@ -71,6 +71,7 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * * UTC offsets in seconds, such as `19800` for UTC+5:30
 * pin ambiguous abbreviations with an environment variable: `DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai"`
 * list all supported abbreviations: `dtmate tz --list-zones`
+* list all IANA zone names with their current offsets: `dtmate tz --list-iana`
 </details>
 
 ## Installation
@@ -503,6 +504,21 @@ ACDT   UTC+10:30  Australian Central Daylight Time
 ACST   UTC+09:30  Australian Central Standard Time
 ACWST  UTC+08:45  Australian Central Western Standard Time
 ...
+
+# list the IANA zone names with the offset currently in effect there
+$ dtmate tz --list-iana
+Africa/Abidjan                   UTC+00:00 (GMT)
+Africa/Accra                     UTC+00:00 (GMT)
+...
+America/New_York                 UTC-04:00 (EDT)
+...
+Europe/London                    UTC+01:00 (BST)
+Europe/Paris                     UTC+02:00 (CEST)
+...
+
+# combine with grep to find a zone
+$ dtmate tz --list-iana | grep -i sydney
+Australia/Sydney                 UTC+10:00 (AEST)
 
 # date/times before 1970 are rejected by default because time zone
 # data is unreliable before then; use --force to convert anyway

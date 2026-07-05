@@ -145,6 +145,19 @@ func (c *TimeZoneConverter) ambiguityWarning(zone string) string {
 		upper, def.Description, FormatUTCOffset(def.Offset), def.Ambiguous, ZoneAliasesEnvVar, upper)
 }
 
+// ListIANAZones returns the IANA time zone names (e.g. America/New_York)
+// that resolve against the time zone database in use, sorted; names from
+// the generated ianaZoneNames list that no longer resolve are dropped
+func ListIANAZones() []string {
+	zones := make([]string, 0, len(ianaZoneNames))
+	for _, name := range ianaZoneNames {
+		if _, err := time.LoadLocation(name); err == nil {
+			zones = append(zones, name)
+		}
+	}
+	return zones
+}
+
 // FormatUTCOffset renders an offset in seconds east of UTC as ±HH:MM
 func FormatUTCOffset(seconds int) string {
 	sign := "+"
