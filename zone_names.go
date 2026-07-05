@@ -3,7 +3,7 @@ package DateTimeMate
 // ianaZoneNames lists the IANA time zone names known at generation time;
 // ListIANAZones validates each against the time zone database in use, so
 // stale entries are filtered out at runtime. Regenerate on macOS/Linux with:
-// find -L /usr/share/zoneinfo -type f | sed 's|/usr/share/zoneinfo/||' | grep '^[A-Z]' | grep -v '\.tab$' | grep -v '^Factory$' | LC_ALL=C sort
+// tools/generate_zone_names.py
 var ianaZoneNames = []string{
 	"Africa/Abidjan",
 	"Africa/Accra",
