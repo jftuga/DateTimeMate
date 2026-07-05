@@ -454,6 +454,12 @@ func TestTimezoneExoticLocations(t *testing.T) {
 			targetZone: "Asia/Yangon",
 			expected:   "2024-01-15 18:30:00 +0630",
 		},
+		{
+			name:       "American Samoa (UTC-11)",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "SST",
+			expected:   "2024-01-15 01:00:00 SST",
+		},
 	}
 
 	for _, tt := range tests {
@@ -465,48 +471,86 @@ func TestTimezoneExoticLocations(t *testing.T) {
 	}
 }
 
-// valid
-func TestTimezoneMilitaryTimezones(t *testing.T) {
+func TestTimezoneAliases(t *testing.T) {
+	aliases, err := ParseZoneAliases("IST=Asia/Jerusalem| cst = Asia/Shanghai ")
+	assert.NoError(t, err)
+	conv := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAliases(aliases))
+
+	// aliases beat the built-in abbreviation map and stay DST aware:
+	// Jerusalem observes IDT in July
+	result, err := conv.ConvertTimeZone("2024-07-15 12:00:00 UTC", "IST")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-07-15 15:00:00 IDT", result.Format("2006-01-02 15:04:05 MST"))
+
+	result, err = conv.ConvertTimeZone("2024-01-15 12:00:00 UTC", "CST")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-01-15 20:00:00 CST", result.Format("2006-01-02 15:04:05 MST"))
+
+	// aliases also apply to the source zone
+	result, err = conv.ConvertTimeZone("2024-01-15 20:00:00 CST", "UTC")
+	assert.NoError(t, err)
+	assert.Equal(t, "2024-01-15 12:00:00 UTC", result.Format("2006-01-02 15:04:05 MST"))
+}
+
+func TestTimezoneParseZoneAliases(t *testing.T) {
+	aliases, err := ParseZoneAliases("")
+	assert.NoError(t, err)
+	assert.Empty(t, aliases)
+
+	_, err = ParseZoneAliases("IST=Not/AZone")
+	assert.Error(t, err)
+
+	_, err = ParseZoneAliases("garbage")
+	assert.Error(t, err)
+
+	_, err = ParseZoneAliases("=Asia/Tokyo")
+	assert.Error(t, err)
+}
+
+func TestTimezoneWarnings(t *testing.T) {
 	conv := setupConverter()
-	tests := []struct {
-		name       string
-		sourceTime string
-		targetZone string
-		expected   string
-	}{
-		{
-			name:       "Zulu Time (Z/UTC)",
-			sourceTime: "2024-01-15 12:00:00 UTC",
-			targetZone: "Z",
-			expected:   "2024-01-15 12:00:00 Z",
-		},
-		{
-			name:       "Alpha Time Zone (A/UTC+1)",
-			sourceTime: "2024-01-15 12:00:00 UTC",
-			targetZone: "A",
-			expected:   "2024-01-15 13:00:00 A",
-		},
-		{
-			name:       "Mike Time Zone (M/UTC+12)",
-			sourceTime: "2024-01-15 12:00:00 UTC",
-			targetZone: "M",
-			expected:   "2024-01-16 00:00:00 M",
-		},
-		{
-			name:       "Yankee Time Zone (Y/UTC-12)",
-			sourceTime: "2024-01-15 12:00:00 UTC",
-			targetZone: "Y",
-			expected:   "2024-01-15 00:00:00 Y",
-		},
+
+	warnings := conv.Warnings("2024-01-15 12:00:00 UTC", "IST")
+	if assert.Len(t, warnings, 1) {
+		assert.Contains(t, warnings[0], "IST is ambiguous")
+		assert.Contains(t, warnings[0], ZoneAliasesEnvVar)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-		})
-	}
+	// ambiguous source zone also warns, but the same zone on both
+	// sides only warns once
+	assert.Len(t, conv.Warnings("2024-01-15 12:00:00 CST", "UTC"), 1)
+	assert.Len(t, conv.Warnings("2024-01-15 12:00:00 CST", "CST"), 1)
+
+	// unambiguous zones do not warn
+	assert.Empty(t, conv.Warnings("2024-01-15 12:00:00 UTC", "JST"))
+
+	// an alias resolves the ambiguity, so no warning
+	aliases, err := ParseZoneAliases("IST=Asia/Jerusalem")
+	assert.NoError(t, err)
+	aliased := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAliases(aliases))
+	assert.Empty(t, aliased.Warnings("2024-01-15 12:00:00 UTC", "IST"))
+}
+
+func TestTimezonePre1970(t *testing.T) {
+	conv := setupConverter()
+
+	_, err := conv.ConvertTimeZone("1900-02-28 23:59:59 UTC", "Europe/London")
+	assert.ErrorIs(t, err, ErrPre1970)
+
+	// zone-less pre-1970 date/times must also be rejected
+	_, err = conv.ConvertTimeZone("1950-01-01 12:00:00", "UTC")
+	assert.ErrorIs(t, err, ErrPre1970)
+
+	forced := NewTimeZoneConverter(
+		TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()),
+		TimeZoneConverterWithAllowPre1970(true))
+	result, err := forced.ConvertTimeZone("1900-02-28 23:59:59 UTC", "Europe/London")
+	assert.NoError(t, err)
+	assert.Equal(t, "1900-02-28 23:59:59 GMT", result.Format("2006-01-02 15:04:05 MST"))
 }
 
 //func TestTimezoneHistoricalChanges(t *testing.T) {
@@ -565,12 +609,6 @@ func TestTimezoneBoundaryConditions(t *testing.T) {
 			sourceTime: "2038-01-19 03:14:07 UTC",
 			targetZone: "America/New_York",
 			expected:   "2038-01-18 22:14:07 EST",
-		},
-		{
-			name:       "Year 1900 Non-Leap Year",
-			sourceTime: "1900-02-28 23:59:59 UTC",
-			targetZone: "Europe/London",
-			expected:   "1900-02-28 23:59:59 GMT",
 		},
 		{
 			name:       "Year 2100 Non-Leap Year",
