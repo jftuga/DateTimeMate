@@ -1,41 +1,36 @@
 package DateTimeMate
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 	_ "time/tzdata"
-
-	"github.com/jftuga/parsetime"
-	"github.com/pkg/errors"
+	"unicode"
 )
 
-// Standard time zone abbreviation mapping errors
 var (
-	ErrInvalidTimezone   = errors.New("invalid timezone specification")
-	ErrInvalidTimeFormat = errors.New("invalid time format")
-	ErrEmptyInput        = errors.New("empty input provided")
-	ErrUnsupportedFormat = errors.New("unsupported time format")
+	ErrInvalidTimezone = errors.New("invalid timezone specification")
+	ErrEmptyInput      = errors.New("empty input provided")
 )
 
-// TimeZoneConverter handles timezone conversion operations
+// TimeZoneConverter converts date/times between time zones; ZoneAbbrevs
+// supplies fixed UTC offsets for abbreviations such as EST or JST that
+// are not resolvable as IANA zone names
 type TimeZoneConverter struct {
-	Source      string
-	TargetTZ    string
 	ZoneAbbrevs map[string]int
 }
 
 type OptionsTimeZoneConverter func(*TimeZoneConverter)
 
 // NewTimeZoneConverter creates a new timezone converter with the given configuration
-func NewTimeZoneConverter(options ...OptionsTimeZoneConverter) (*TimeZoneConverter, error) {
-	tzc := &TimeZoneConverter{}
+func NewTimeZoneConverter(options ...OptionsTimeZoneConverter) *TimeZoneConverter {
+	tzc := new(TimeZoneConverter)
 	for _, opt := range options {
 		opt(tzc)
 	}
-
-	return tzc, nil
+	return tzc
 }
 
 func TimeZoneConverterWithZoneAbbrevs(zoneAbbrevs map[string]int) OptionsTimeZoneConverter {
@@ -44,138 +39,99 @@ func TimeZoneConverterWithZoneAbbrevs(zoneAbbrevs map[string]int) OptionsTimeZon
 	}
 }
 
-func TimeZoneConverterWithSource(source string) OptionsTimeZoneConverter {
-	return func(tzc *TimeZoneConverter) {
-		tzc.Source = source
-	}
-}
-
-func TimeZoneConverterWithTargetTZ(targetTZ string) OptionsTimeZoneConverter {
-	return func(tzc *TimeZoneConverter) {
-		tzc.TargetTZ = targetTZ
-	}
-}
-
-// ConvertTimeZone converts a time from one timezone to another
+// ConvertTimeZone converts a date/time string to the target time zone; the
+// source may end in its own zone (IANA name or abbreviation), otherwise it
+// is parsed as a local date/time
 func (c *TimeZoneConverter) ConvertTimeZone(sourceTime string, targetZone string) (time.Time, error) {
+	sourceTime = strings.TrimSpace(sourceTime)
+	targetZone = strings.TrimSpace(targetZone)
 	if sourceTime == "" || targetZone == "" {
 		return time.Time{}, ErrEmptyInput
 	}
 
-	// Validate input lengths to prevent buffer overflow
-	const maxInputLength = 100
-	if len(sourceTime) > maxInputLength || len(targetZone) > maxInputLength {
-		return time.Time{}, errors.New("input exceeds maximum length")
-	}
-
-	// Parse source time
-	// parsed is of type time.Time
-	parsed, err := c.parseTime(sourceTime)
+	parsed, err := c.parseSourceTime(sourceTime)
 	if err != nil {
-		return time.Time{}, errors.Wrap(err, "failed to parse source time")
+		return time.Time{}, fmt.Errorf("failed to parse source time: %w", err)
 	}
 
-	// Get target location
-	// targetLoc is of type time.Location
 	targetLoc, err := c.resolveLocation(targetZone)
 	if err != nil {
-		return time.Time{}, errors.Wrap(err, "failed to resolve target timezone")
+		return time.Time{}, fmt.Errorf("failed to resolve target timezone %q: %w", targetZone, err)
 	}
 
-	println("parsed   : ", parsed.String())
-	println("targetLoc: ", targetLoc.String())
-
-	// Convert to target timezone
-	// result is of type time.Time
-	result := parsed.In(targetLoc)
-	return result, nil
+	return parsed.In(targetLoc), nil
 }
 
-// FormatTime formats a time.Time according to the specified format
-func (c *TimeZoneConverter) FormatTime(t time.Time, format string) string {
-	return t.Format(format)
+// wallClockLayouts are tried when interpreting the date/time preceding an
+// explicit source zone; time.ParseInLocation is preferred over parsetime
+// because parsetime silently corrupts pre-1970 date/times
+var wallClockLayouts = []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02"}
+
+// parseSourceTime parses a date/time string; when the last field names a
+// resolvable time zone, the preceding wall clock is interpreted in that
+// zone, otherwise the whole string is parsed with parseDateTime, which
+// assumes the local zone for zone-less date/times
+func (c *TimeZoneConverter) parseSourceTime(input string) (time.Time, error) {
+	if idx := strings.LastIndex(input, " "); idx != -1 {
+		zone := input[idx+1:]
+		if isZoneName(zone) {
+			if loc, err := c.resolveLocation(zone); err == nil {
+				wall := strings.TrimSpace(input[:idx])
+				for _, layout := range wallClockLayouts {
+					if t, err := time.ParseInLocation(layout, wall, loc); err == nil {
+						return t, nil
+					}
+				}
+				t, err := parseDateTime(wall)
+				if err != nil {
+					return time.Time{}, err
+				}
+				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
+			}
+		}
+	}
+	return parseDateTime(ConvertRelativeDateToActual(input))
 }
 
-// parseOffset parses a timezone offset string (e.g., "-14400" or "+0800") into seconds
-func parseOffset(offset string) (int, error) {
-	// Remove any leading '+' sign
-	offset = strings.TrimPrefix(offset, "+")
-
-	// Try parsing as a number of seconds
-	seconds, err := strconv.Atoi(offset)
-	if err == nil {
-		// Validate the offset is within reasonable bounds (-12:00 to +14:00)
-		if seconds >= -43200 && seconds <= 50400 {
-			return seconds, nil
-		}
-		return 0, errors.New("offset out of valid range (-12:00 to +14:00)")
+// isZoneName reports whether a field can name a time zone: an IANA path
+// such as America/New_York or an alphabetic abbreviation such as EST;
+// numeric fields (e.g. "-0500") are left to the date/time parser
+func isZoneName(s string) bool {
+	if strings.Contains(s, "/") {
+		return true
 	}
-
-	// Try parsing as HHMM format
-	if len(offset) == 4 {
-		hours, err := strconv.Atoi(offset[:2])
-		if err != nil {
-			return 0, errors.Wrap(err, "invalid hours in offset")
+	for _, r := range s {
+		if !unicode.IsLetter(r) {
+			return false
 		}
-		minutes, err := strconv.Atoi(offset[2:])
-		if err != nil {
-			return 0, errors.Wrap(err, "invalid minutes in offset")
-		}
-
-		// Validate the parts
-		if hours < -12 || hours > 14 {
-			return 0, errors.New("hours out of valid range (-12 to +14)")
-		}
-		if minutes < 0 || minutes > 59 {
-			return 0, errors.New("minutes out of valid range (0 to 59)")
-		}
-
-		return (hours * 3600) + (minutes * 60), nil
 	}
-
-	return 0, errors.New("invalid offset format")
+	return s != ""
 }
 
-// parseTime attempts to parse the input time string using configured formats
-func (c *TimeZoneConverter) parseTime(input string) (time.Time, error) {
-	p, err := parsetime.NewParseTime()
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	t, err := p.Parse(input)
-	fmt.Println("input:", input)
-	fmt.Println("    t:", t)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return t, nil
-}
-
-// resolveLocation resolves a timezone specification to a time.Location
+// resolveLocation resolves a time zone given as an IANA name (DST aware),
+// an abbreviation from ZoneAbbrevs, or a UTC offset in seconds
 func (c *TimeZoneConverter) resolveLocation(zone string) (*time.Location, error) {
-	// Try as IANA timezone first
-	fmt.Println("zone:", zone)
-	loc, err := time.LoadLocation(zone)
-	if err != nil && !strings.Contains(err.Error(), "unknown time zone") {
-		fmt.Println("xxx1  err:", err.Error())
+	if loc, err := time.LoadLocation(zone); err == nil {
 		return loc, nil
 	}
-
-	// Try as offset
-	offset, err := parseOffset(zone)
-	if err != nil && !strings.Contains(err.Error(), "invalid") {
-		fmt.Println("xxx2 err:", err.Error())
+	if offset, ok := c.ZoneAbbrevs[strings.ToUpper(zone)]; ok {
+		return time.FixedZone(strings.ToUpper(zone), offset), nil
+	}
+	if offset, err := parseOffset(zone); err == nil {
 		return time.FixedZone(fmt.Sprintf("UTC%+d", offset/3600), offset), nil
 	}
-
-	// Try as abbreviation
-	if offset, ok := c.ZoneAbbrevs[strings.ToUpper(zone)]; ok {
-		fmt.Println("xxx3 ok:", offset, ok)
-		return time.FixedZone(zone, offset), nil
-	}
-
-	fmt.Println("CRAP")
 	return nil, ErrInvalidTimezone
+}
+
+// parseOffset parses a UTC offset given in seconds (e.g. "19800" or
+// "-34200") and validates it falls within -12:00 to +14:00
+func parseOffset(offset string) (int, error) {
+	seconds, err := strconv.Atoi(strings.TrimPrefix(offset, "+"))
+	if err != nil {
+		return 0, fmt.Errorf("invalid offset %q: %w", offset, err)
+	}
+	if seconds < -43200 || seconds > 50400 {
+		return 0, fmt.Errorf("offset %q out of valid range (-12:00 to +14:00)", offset)
+	}
+	return seconds, nil
 }

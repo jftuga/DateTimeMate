@@ -89,6 +89,9 @@ func testDurAddUntil(t *testing.T, from, until, periodFuture string, correctAdd 
 	if err != nil {
 		t.Error(err)
 	}
+	if len(future) != len(correctAdd) {
+		t.Fatalf("[from: %v] expected %d results, got %d: %v", from, len(correctAdd), len(future), future)
+	}
 
 	for i := range len(future) {
 		if !strings.Contains(future[i], correctAdd[i]) {
@@ -107,6 +110,9 @@ func testDurSubUntil(t *testing.T, from, until, periodPast string, correctSub []
 	past, err := durPast.Sub()
 	if err != nil {
 		t.Error(err)
+	}
+	if len(past) != len(correctSub) {
+		t.Fatalf("[from: %v] expected %d results, got %d: %v", from, len(correctSub), len(past), past)
 	}
 	for i := range len(past) {
 		if !strings.Contains(past[i], correctSub[i]) {
@@ -382,14 +388,27 @@ func TestDurSubUntil(t *testing.T) {
 
 func TestDurRelativeUntil(t *testing.T) {
 	t.Parallel()
-	from := carbon.Now().StartOfDay().ToDateTimeString()
-	period := "7h59m1s"
-	until := "tomorrow"
-	allCorrectAdd := []string{"", "", "", "", ""}
-	allCorrectAdd[0] = strings.Replace(from, "00:00:00", "07:59:01", 1)
-	allCorrectAdd[1] = strings.Replace(from, "00:00:00", "15:58:02", 1)
-	allCorrectAdd[2] = strings.Replace(from, "00:00:00", "23:57:03", 1)
-	allCorrectAdd[3] = strings.Replace(from, "00:00:00", "07:56:04", 1)
-	allCorrectAdd[3] = strings.Replace(allCorrectAdd[3], carbon.Now().ToDateString(), carbon.Tomorrow().ToDateString(), 1)
-	testDurAddUntil(t, from, until, period, allCorrectAdd)
+	start := carbon.Now().StartOfDay()
+	from := start.ToDateTimeString()
+	dur := NewDur(
+		DurWithFrom(from),
+		DurWithDur("7h59m1s"),
+		DurWithUntil("tomorrow"))
+	future, err := dur.Add()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// "tomorrow" resolves to now+24h, so the span covered from start of day
+	// grows with the wall clock; the result count varies with the time of
+	// day, but each entry is deterministic: start of day plus i+1 periods
+	if len(future) < 3 || len(future) > 6 {
+		t.Fatalf("[from: %v] expected 3 to 6 results, got %d: %v", from, len(future), future)
+	}
+	period := 7*time.Hour + 59*time.Minute + 1*time.Second
+	for i := range len(future) {
+		correct := start.StdTime().Add(time.Duration(i+1) * period).Format("2006-01-02 15:04:05")
+		if !strings.Contains(future[i], correct) {
+			t.Errorf("[from: %v] [computed: %v] does not contain: [correct: %v]", from, future[i], correct)
+		}
+	}
 }

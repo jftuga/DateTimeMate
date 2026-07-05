@@ -9,17 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupConverter(t *testing.T) *TimeZoneConverter {
-	defaultZones := LoadZoneDefinitions()
-	conv, err := NewTimeZoneConverter(TimeZoneConverterWithZoneAbbrevs(defaultZones))
-	if err != nil {
-		t.Fatalf("Failed to create converter: %v", err)
-	}
-	return conv
+func setupConverter() *TimeZoneConverter {
+	return NewTimeZoneConverter(TimeZoneConverterWithZoneAbbrevs(LoadZoneDefinitions()))
 }
 
 func TestTimezoneBasicConversions(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -47,10 +42,8 @@ func TestTimezoneBasicConversions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		println(tt.name, tt.sourceTime)
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-			println("          ", result.String())
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
 		})
@@ -58,7 +51,7 @@ func TestTimezoneBasicConversions(t *testing.T) {
 }
 
 func TestTimezoneHalfHourOffsets(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -75,7 +68,7 @@ func TestTimezoneHalfHourOffsets(t *testing.T) {
 			name:       "UTC to India (UTC+5:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Asia/Kolkata",
-			expected:   "2024-01-15 17:30:00 Asia/Kolkata",
+			expected:   "2024-01-15 17:30:00 IST",
 		},
 		{
 			name:       "UTC to Iran (UTC+3:30)",
@@ -87,7 +80,7 @@ func TestTimezoneHalfHourOffsets(t *testing.T) {
 			name:       "UTC to Iran (UTC+3:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Asia/Tehran",
-			expected:   "2024-01-15 15:30:00 Asia/Tehran",
+			expected:   "2024-01-15 15:30:00 +0330",
 		},
 		{
 			name:       "UTC to Newfoundland (UTC-3:30)",
@@ -105,7 +98,7 @@ func TestTimezoneHalfHourOffsets(t *testing.T) {
 			name:       "UTC to Afghanistan (UTC+4:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Asia/Kabul",
-			expected:   "2024-01-15 16:30:00 Asia/Kabul",
+			expected:   "2024-01-15 16:30:00 +0430",
 		},
 	}
 
@@ -119,7 +112,7 @@ func TestTimezoneHalfHourOffsets(t *testing.T) {
 }
 
 func TestTimezoneQuarterHourOffsets(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -136,7 +129,7 @@ func TestTimezoneQuarterHourOffsets(t *testing.T) {
 			name:       "UTC to Nepal (UTC+5:45)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Asia/Kathmandu",
-			expected:   "2024-01-15 17:45:00 Asia/Kathmandu",
+			expected:   "2024-01-15 17:45:00 +0545",
 		},
 		{
 			name:       "UTC to Chatham Islands (UTC+12:45)",
@@ -148,7 +141,7 @@ func TestTimezoneQuarterHourOffsets(t *testing.T) {
 			name:       "UTC to Chatham Islands (UTC+12:45)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Pacific/Chatham",
-			expected:   "2024-01-16 00:45:00 Pacific/Chatham",
+			expected:   "2024-01-16 01:45:00 +1345", // January is Chatham daylight time (UTC+13:45)
 		},
 		{
 			name:       "UTC to Eucla Australia (UTC+8:45)",
@@ -160,7 +153,7 @@ func TestTimezoneQuarterHourOffsets(t *testing.T) {
 			name:       "UTC to Eucla Australia (UTC+8:45)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Australia/Eucla",
-			expected:   "2024-01-15 20:45:00 Australia/Eucla",
+			expected:   "2024-01-15 20:45:00 +0845",
 		},
 	}
 
@@ -174,7 +167,7 @@ func TestTimezoneQuarterHourOffsets(t *testing.T) {
 }
 
 func TestTimezoneSpecialCases(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -191,7 +184,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 			name:       "Arizona (No DST)",
 			sourceTime: "2024-07-15 12:00:00 UTC", // Summer
 			targetZone: "America/Phoenix",
-			expected:   "2024-07-15 05:00:00 America/Phoenix",
+			expected:   "2024-07-15 05:00:00 MST",
 		},
 		{
 			name:       "Indiana (Eastern Time)",
@@ -203,19 +196,19 @@ func TestTimezoneSpecialCases(t *testing.T) {
 			name:       "Indiana (Eastern Time)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "America/Indiana/Indianapolis",
-			expected:   "2024-01-15 07:00:00 America/Indiana/Indianapolis",
+			expected:   "2024-01-15 07:00:00 EST",
 		},
 		{
 			name:       "Lord Howe Island (UTC+10:30/+11)",
 			sourceTime: "2024-01-15 12:00:00 UTC", // Summer
 			targetZone: "LHDT",
-			expected:   "2024-01-15 23:00:00 LHDT", // FIXME
+			expected:   "2024-01-15 23:00:00 LHDT",
 		},
 		{
 			name:       "Lord Howe Island (UTC+10:30/+11)",
 			sourceTime: "2024-01-15 12:00:00 UTC", // Summer
 			targetZone: "Australia/Lord_Howe",
-			expected:   "2024-01-15 22:30:00 Australia/Lord_Howe", // FIXME
+			expected:   "2024-01-15 23:00:00 +11", // January is Lord Howe daylight time (UTC+11)
 		},
 		//{
 		//	name:       "Antarctica/Casey",
@@ -241,7 +234,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 }
 
 //func TestTimezoneNumericOffsets(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -273,7 +266,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 
 // FIXME - add this function back in
 //func TestTimezoneErrorCases(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -320,7 +313,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 
 // FIXME add this function back it - this is complicated
 //func TestTimezoneDSTTransitions(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -381,7 +374,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 //}
 
 //func TestTimezoneHistoricalTimezones(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -418,7 +411,7 @@ func TestTimezoneSpecialCases(t *testing.T) {
 //}
 
 func TestTimezoneExoticLocations(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -429,37 +422,37 @@ func TestTimezoneExoticLocations(t *testing.T) {
 			name:       "Kiritimati (Christmas Island, UTC+14)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Pacific/Kiritimati",
-			expected:   "2024-01-16 02:00:00 LINT",
+			expected:   "2024-01-16 02:00:00 +14",
 		},
 		{
 			name:       "Baker Island (UTC-12)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Etc/GMT+12",
-			expected:   "2024-01-15 00:00:00 GMT+12",
+			expected:   "2024-01-15 00:00:00 -12", // Etc/GMT+12 uses the POSIX-inverted sign; its abbreviation is -12
 		},
 		{
 			name:       "Tonga (UTC+13)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Pacific/Tongatapu",
-			expected:   "2024-01-16 01:00:00 TOT",
+			expected:   "2024-01-16 01:00:00 +13",
 		},
 		{
 			name:       "Marquesas Islands (UTC-9:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Pacific/Marquesas",
-			expected:   "2024-01-15 02:30:00 MART",
+			expected:   "2024-01-15 02:30:00 -0930",
 		},
 		{
 			name:       "Cocos Islands (UTC+6:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Indian/Cocos",
-			expected:   "2024-01-15 18:30:00 CCT",
+			expected:   "2024-01-15 18:30:00 +0630",
 		},
 		{
 			name:       "Myanmar (UTC+6:30)",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Asia/Yangon",
-			expected:   "2024-01-15 18:30:00 MMT",
+			expected:   "2024-01-15 18:30:00 +0630",
 		},
 	}
 
@@ -474,7 +467,7 @@ func TestTimezoneExoticLocations(t *testing.T) {
 
 // valid
 func TestTimezoneMilitaryTimezones(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -517,7 +510,7 @@ func TestTimezoneMilitaryTimezones(t *testing.T) {
 }
 
 //func TestTimezoneHistoricalChanges(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -560,7 +553,7 @@ func TestTimezoneMilitaryTimezones(t *testing.T) {
 //}
 
 func TestTimezoneBoundaryConditions(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -603,7 +596,7 @@ func TestTimezoneBoundaryConditions(t *testing.T) {
 }
 
 func TestTimezoneDSTEdgeCases(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -629,10 +622,18 @@ func TestTimezoneDSTEdgeCases(t *testing.T) {
 			expected:   "2024-09-29 01:59:59 AEST",
 		},
 		{
-			name:       "Israel Variable DST",
-			sourceTime: "2024-03-29 02:00:00 IST",
+			// IST is ambiguous (the abbreviation map resolves it to India),
+			// so probe Israel's variable DST from unambiguous UTC sources
+			name:       "Israel Before Variable DST Start",
+			sourceTime: "2024-03-28 12:00:00 UTC",
 			targetZone: "Asia/Jerusalem",
-			expected:   "2024-03-29 02:00:00 IST",
+			expected:   "2024-03-28 14:00:00 IST",
+		},
+		{
+			name:       "Israel After Variable DST Start",
+			sourceTime: "2024-03-29 12:00:00 UTC",
+			targetZone: "Asia/Jerusalem",
+			expected:   "2024-03-29 15:00:00 IDT",
 		},
 	}
 
@@ -647,7 +648,7 @@ func TestTimezoneDSTEdgeCases(t *testing.T) {
 
 // valid
 func BenchmarkTimeConversion(b *testing.B) {
-	conv := setupConverter(nil)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -673,7 +674,7 @@ func BenchmarkTimeConversion(b *testing.B) {
 
 // valid
 func TestTimezoneParallelConversion(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	t.Run("Parallel", func(t *testing.T) {
 		t.Parallel()
 		for i := 0; i < 100; i++ {
@@ -684,7 +685,7 @@ func TestTimezoneParallelConversion(t *testing.T) {
 	})
 }
 func TestTimezoneSpecificRegionalCases(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -760,7 +761,7 @@ func TestTimezoneSpecificRegionalCases(t *testing.T) {
 			name:       "Antarctica - Casey",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Antarctica/Casey",
-			expected:   "2024-01-15 19:00:00 +07",
+			expected:   "2024-01-15 20:00:00 +08", // Casey moved to UTC+8 in March 2023
 		},
 		{
 			name:       "Antarctica - Davis",
@@ -784,7 +785,7 @@ func TestTimezoneSpecificRegionalCases(t *testing.T) {
 			name:       "Antarctica - Troll",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "Antarctica/Troll",
-			expected:   "2024-01-15 13:00:00 +01",
+			expected:   "2024-01-15 12:00:00 +00", // Troll is UTC+0 outside its March-October +02 period
 		},
 	}
 
@@ -798,7 +799,7 @@ func TestTimezoneSpecificRegionalCases(t *testing.T) {
 }
 
 //func TestTimezoneLeapSecondHandling(t *testing.T) {
-//	conv := setupConverter(t)
+//	conv := setupConverter()
 //	tests := []struct {
 //		name       string
 //		sourceTime string
@@ -841,7 +842,7 @@ func TestTimezoneSpecificRegionalCases(t *testing.T) {
 //}
 
 func TestTimezoneFormatVariations(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	sourceTime := "2024-01-15 12:00:00 UTC"
 	targetZone := "America/New_York"
 
@@ -902,7 +903,7 @@ func TestTimezoneFormatVariations(t *testing.T) {
 }
 
 func TestTimezoneTimezoneAbbreviationNormalization(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 	tests := []struct {
 		name       string
 		sourceTime string
@@ -939,7 +940,7 @@ func TestTimezoneTimezoneAbbreviationNormalization(t *testing.T) {
 }
 
 func TestTimezonePropertyBasedTimezones(t *testing.T) {
-	conv := setupConverter(t)
+	conv := setupConverter()
 
 	// Test that converting to UTC and back preserves the original time
 	t.Run("UTC Roundtrip", func(t *testing.T) {
@@ -965,13 +966,13 @@ func TestTimezonePropertyBasedTimezones(t *testing.T) {
 		}
 
 		// Should be back to original UTC time
-		assert.Equal(t, "2024-01-15 12:00:00 UTC", result)
+		assert.Equal(t, "2024-01-15 12:00:00 UTC", result.Format("2006-01-02 15:04:05 MST"))
 	})
 }
 
 // valid
 func BenchmarkComplexScenarios(b *testing.B) {
-	conv := setupConverter(nil)
+	conv := setupConverter()
 	scenarios := []struct {
 		name       string
 		sourceTime string
