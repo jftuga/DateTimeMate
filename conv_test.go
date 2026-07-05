@@ -313,3 +313,35 @@ func TestConvNanoseconds1(t *testing.T) {
 	correct = "-39Y6W2D5h31m30s987ms654us447ns"
 	testConv(t, source, target, true, correct)
 }
+
+// TestConvReuse guards against ConvertDuration mutating its receiver:
+// reusing one Conv must return identical results on every call,
+// including the negative sign and the original brief source format
+func TestConvReuse(t *testing.T) {
+	t.Parallel()
+	conv := NewConv(
+		ConvWithSource("-90m"),
+		ConvWithTarget("hours"))
+	for i := 0; i < 2; i++ {
+		result, err := conv.ConvertDuration()
+		if err != nil {
+			t.Error(err)
+		}
+		if result != "-1 hour" {
+			t.Errorf("call %d:\n[computed: %v] !=\n[correct : -1 hour]", i+1, result)
+		}
+	}
+
+	conv = NewConv(
+		ConvWithSource("90m"),
+		ConvWithTarget("hours"))
+	for i := 0; i < 2; i++ {
+		result, err := conv.ConvertDuration()
+		if err != nil {
+			t.Error(err)
+		}
+		if result != "1 hour" {
+			t.Errorf("call %d:\n[computed: %v] !=\n[correct : 1 hour]", i+1, result)
+		}
+	}
+}

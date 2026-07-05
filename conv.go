@@ -309,12 +309,13 @@ func (conv *Conv) ConvertDuration() (string, error) {
 	if conv.Decimals < 0 || conv.Decimals > 9 {
 		return "", fmt.Errorf("decimals must be between 0 and 9: %d", conv.Decimals)
 	}
+	source := conv.Source
 	isNegativeDuration := false
-	if s, found := strings.CutPrefix(conv.Source, "-"); found {
-		conv.Source = s
+	if s, found := strings.CutPrefix(source, "-"); found {
+		source = s
 		isNegativeDuration = true
 	}
-	seconds, err := parseDurationSeconds(conv.Source)
+	seconds, err := parseDurationSeconds(source)
 	if err != nil {
 		return "", err
 	}

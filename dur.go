@@ -11,15 +11,14 @@ import (
 	"time"
 )
 
-// used for Dur.Op
+// internal operation selectors for addOrSub
 const (
-	Add = iota
-	Sub
+	opAdd = iota
+	opSub
 )
 
 type Dur struct {
 	From         string
-	Op           int
 	Period       string
 	Repeat       int
 	Until        string
@@ -105,15 +104,15 @@ func DurWithOutputFormat(outputFormat string) OptionsDur {
 }
 
 func (dur *Dur) String() string {
-	return fmt.Sprintf("From:%v Period:%v Op:%v, Repeat:%v Until:%v OutputFormat:%v", dur.From, dur.Period, dur.Op, dur.Repeat, dur.Until, dur.OutputFormat)
+	return fmt.Sprintf("From:%v Period:%v Repeat:%v Until:%v OutputFormat:%v", dur.From, dur.Period, dur.Repeat, dur.Until, dur.OutputFormat)
 }
 
 func (dur *Dur) Add() ([]string, error) {
-	return dur.addOrSub(Add)
+	return dur.addOrSub(opAdd)
 }
 
 func (dur *Dur) Sub() ([]string, error) {
-	return dur.addOrSub(Sub)
+	return dur.addOrSub(opSub)
 }
 
 // addOrSub - calculates a date/time when given a starting date/time and a duration
@@ -175,7 +174,7 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 				return nil, fmt.Errorf("duration %q does not advance toward the until date/time", dur.Period)
 			}
 			to = next
-			if Add == op {
+			if opAdd == op {
 				if to.StdTime().After(u) {
 					break
 				}

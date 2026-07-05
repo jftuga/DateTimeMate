@@ -101,13 +101,14 @@ func TestFormatCommand(t *testing.T) {
 	correct = "1718560862"
 	testFormat(t, source, fmt, correct)
 
+	// unix timestamps render in local time, so compute the expected
+	// value dynamically to keep this test timezone-independent
 	source = "1704085262"
 	fmt = "%F %T"
-	correct = "2024-01-01 00:01:02"
+	correct = time.Unix(1704085262, 0).Format("2006-01-02 15:04:05")
 	testFormat(t, source, fmt, correct)
 
 	source = "1704085262999"
 	fmt = "%F %T"
-	correct = "2024-01-01 00:01:02"
 	testFormat(t, source, fmt, correct)
 }
