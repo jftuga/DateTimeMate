@@ -211,18 +211,6 @@ func TestTimezoneSpecialCases(t *testing.T) {
 			targetZone: "Australia/Lord_Howe",
 			expected:   "2024-01-15 23:00:00 +11", // January is Lord Howe daylight time (UTC+11)
 		},
-		//{
-		//	name:       "Antarctica/Casey",
-		//	sourceTime: "2024-01-15 12:00:00 UTC",
-		//	targetZone: "CAST",
-		//	expected:   "2024-01-15 19:00:00 CAST", // FIXME
-		//},
-		//{
-		//	name:       "Antarctica/Casey",
-		//	sourceTime: "2024-01-15 12:00:00 UTC",
-		//	targetZone: "Antarctica/Casey",
-		//	expected:   "2024-01-15 19:00:00 Antarctica/Casey", // FIXME
-		//},
 	}
 
 	for _, tt := range tests {
@@ -234,182 +222,104 @@ func TestTimezoneSpecialCases(t *testing.T) {
 	}
 }
 
-//func TestTimezoneNumericOffsets(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expected   string
-//	}{
-//		{
-//			name:       "UTC to +0530",
-//			sourceTime: "2024-01-15 12:00:00 UTC",
-//			targetZone: "19800", // +5:30 in seconds
-//			expected:   "2024-01-15 17:30:00 UTC+5",
-//		},
-//		{
-//			name:       "UTC to -0930",
-//			sourceTime: "2024-01-15 12:00:00 UTC",
-//			targetZone: "-34200", // -9:30 in seconds
-//			expected:   "2024-01-15 02:30:00 UTC-9",
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			assert.NoError(t, err)
-//			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-//		})
-//	}
-//}
+func TestTimezoneNumericOffsets(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "UTC to +0530",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "19800", // +5:30 in seconds
+			expected:   "2024-01-15 17:30:00 UTC+5",
+		},
+		{
+			name:       "UTC to -0930",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "-34200", // -9:30 in seconds
+			expected:   "2024-01-15 02:30:00 UTC-9",
+		},
+	}
 
-// FIXME - add this function back in
-//func TestTimezoneErrorCases(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expectErr  bool
-//	}{
-//		{
-//			name:       "Invalid source time format",
-//			sourceTime: "2024-13-45 99:99:99 XYZ",
-//			targetZone: "UTC",
-//			expectErr:  true,
-//		},
-//		{
-//			name:       "Unknown timezone",
-//			sourceTime: "2024-01-15 12:00:00 UTC",
-//			targetZone: "INVALID_TZ",
-//			expectErr:  true,
-//		},
-//		{
-//			name:       "Invalid offset value",
-//			sourceTime: "2024-01-15 12:00:00 UTC",
-//			targetZone: "999999",
-//			expectErr:  true,
-//		},
-//		{
-//			name:       "Empty input",
-//			sourceTime: "",
-//			targetZone: "UTC",
-//			expectErr:  true,
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			_, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			if tt.expectErr {
-//				assert.Error(t, err)
-//			} else {
-//				assert.NoError(t, err)
-//			}
-//		})
-//	}
-//}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
 
-// FIXME add this function back it - this is complicated
-//func TestTimezoneDSTTransitions(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expected   string
-//	}{
-//		{
-//			name:       "US DST Spring Forward",
-//			sourceTime: "2024-03-10 06:00:00 UTC",
-//			targetZone: "EDT",
-//			expected:   "2024-03-10 02:00:00 EDT",
-//		},
-//		{
-//			name:       "US DST Spring Forward",
-//			sourceTime: "2024-03-10 06:00:00 UTC",
-//			targetZone: "America/New_York",
-//			expected:   "2024-03-10 02:00:00 America/New_York",
-//		},
-//		//{
-//		//	name:       "US DST Fall Back",
-//		//	sourceTime: "2024-11-03 06:00:00 UTC",
-//		//	targetZone: "America/New_York",
-//		//	expected:   "2024-11-03 01:00:00 EST",
-//		//},
-//		//{
-//		//	name:       "European DST Start",
-//		//	sourceTime: "2024-03-31 01:00:00 UTC",
-//		//	targetZone: "Europe/Paris",
-//		//	expected:   "2024-03-31 03:00:00 CEST",
-//		//},
-//		//{
-//		//	name:       "European DST End",
-//		//	sourceTime: "2024-10-27 01:00:00 UTC",
-//		//	targetZone: "Europe/Paris",
-//		//	expected:   "2024-10-27 02:00:00 CET",
-//		//},
-//		//{
-//		//	name:       "Southern Hemisphere DST Start",
-//		//	sourceTime: "2024-10-06 16:00:00 UTC",
-//		//	targetZone: "Pacific/Auckland",
-//		//	expected:   "2024-10-07 05:00:00 NZDT",
-//		//},
-//		//{
-//		//	name:       "Southern Hemisphere DST End",
-//		//	sourceTime: "2024-04-07 14:00:00 UTC",
-//		//	targetZone: "Pacific/Auckland",
-//		//	expected:   "2024-04-08 02:00:00 NZST",
-//		//},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			assert.NoError(t, err)
-//			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-//		})
-//	}
-//}
+func TestTimezoneErrorCases(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+	}{
+		{
+			name:       "Invalid source time format",
+			sourceTime: "2024-13-45 99:99:99 XYZ",
+			targetZone: "UTC",
+		},
+		{
+			name:       "Unknown timezone",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "INVALID_TZ",
+		},
+		{
+			name:       "Invalid offset value",
+			sourceTime: "2024-01-15 12:00:00 UTC",
+			targetZone: "999999",
+		},
+		{
+			name:       "Empty input",
+			sourceTime: "",
+			targetZone: "UTC",
+		},
+	}
 
-//func TestTimezoneHistoricalTimezones(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expected   string
-//	}{
-//		{
-//			name:       "Historical Shanghai Time",
-//			sourceTime: "1927-01-01 12:00:00 UTC",
-//			targetZone: "Asia/Shanghai",
-//			expected:   "1927-01-01 19:45:00 CST",
-//		},
-//		{
-//			name:       "Pre-2000 Israel",
-//			sourceTime: "1995-01-01 12:00:00 UTC",
-//			targetZone: "Asia/Jerusalem",
-//			expected:   "1995-01-01 14:00:00 IST",
-//		},
-//		{
-//			name:       "Pre-1986 Eastern Australia",
-//			sourceTime: "1985-01-01 12:00:00 UTC",
-//			targetZone: "Australia/Sydney",
-//			expected:   "1985-01-01 22:00:00 AEST",
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			assert.NoError(t, err)
-//			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-//		})
-//	}
-//}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestTimezoneHistorical(t *testing.T) {
+	conv := setupConverter()
+	tests := []struct {
+		name       string
+		sourceTime string
+		targetZone string
+		expected   string
+	}{
+		{
+			name:       "Pre-2000 Israel",
+			sourceTime: "1995-01-01 12:00:00 UTC",
+			targetZone: "Asia/Jerusalem",
+			expected:   "1995-01-01 14:00:00 IST",
+		},
+		{
+			name:       "1985 Eastern Australia",
+			sourceTime: "1985-01-01 12:00:00 UTC",
+			targetZone: "Australia/Sydney",
+			expected:   "1985-01-01 23:00:00 AEDT", // January is daylight time in Sydney
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
+		})
+	}
+}
 
 func TestTimezoneExoticLocations(t *testing.T) {
 	conv := setupConverter()
@@ -571,49 +481,6 @@ func TestTimezonePre1970(t *testing.T) {
 	assert.Equal(t, "1900-02-28 23:59:59 GMT", result.Format("2006-01-02 15:04:05 MST"))
 }
 
-//func TestTimezoneHistoricalChanges(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expected   string
-//	}{
-//		{
-//			name:       "China pre-1949",
-//			sourceTime: "1940-01-15 12:00:00 UTC",
-//			targetZone: "Asia/Shanghai",
-//			expected:   "1940-01-15 20:00:00 CST",
-//		},
-//		{
-//			name:       "India pre-1947",
-//			sourceTime: "1940-01-15 12:00:00 UTC",
-//			targetZone: "Asia/Kolkata",
-//			expected:   "1940-01-15 17:30:00 IST",
-//		},
-//		{
-//			name:       "Alaska Purchase (1867)",
-//			sourceTime: "1867-10-18 12:00:00 UTC",
-//			targetZone: "America/Juneau",
-//			expected:   "1867-10-18 03:00:00 LMT",
-//		},
-//		{
-//			name:       "Singapore pre-1982",
-//			sourceTime: "1981-12-31 12:00:00 UTC",
-//			targetZone: "Asia/Singapore",
-//			expected:   "1981-12-31 19:30:00 SGT",
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			assert.NoError(t, err)
-//			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-//		})
-//	}
-//}
-
 func TestTimezoneBoundaryConditions(t *testing.T) {
 	conv := setupConverter()
 	tests := []struct {
@@ -702,7 +569,6 @@ func TestTimezoneDSTEdgeCases(t *testing.T) {
 	}
 }
 
-// valid
 func BenchmarkTimeConversion(b *testing.B) {
 	conv := setupConverter()
 	tests := []struct {
@@ -728,7 +594,6 @@ func BenchmarkTimeConversion(b *testing.B) {
 	}
 }
 
-// valid
 func TestTimezoneParallelConversion(t *testing.T) {
 	conv := setupConverter()
 	t.Run("Parallel", func(t *testing.T) {
@@ -853,49 +718,6 @@ func TestTimezoneSpecificRegionalCases(t *testing.T) {
 		})
 	}
 }
-
-//func TestTimezoneLeapSecondHandling(t *testing.T) {
-//	conv := setupConverter()
-//	tests := []struct {
-//		name       string
-//		sourceTime string
-//		targetZone string
-//		expected   string
-//	}{
-//		{
-//			name:       "Leap Second 2016",
-//			sourceTime: "2016-12-31 23:59:60 UTC",
-//			targetZone: "America/New_York",
-//			expected:   "2016-12-31 18:59:60 EST",
-//		},
-//		{
-//			name:       "Post Leap Second 2016",
-//			sourceTime: "2017-01-01 00:00:00 UTC",
-//			targetZone: "America/New_York",
-//			expected:   "2016-12-31 19:00:00 EST",
-//		},
-//		{
-//			name:       "Leap Second 2012",
-//			sourceTime: "2012-06-30 23:59:60 UTC",
-//			targetZone: "Asia/Tokyo",
-//			expected:   "2012-07-01 08:59:60 JST",
-//		},
-//		{
-//			name:       "Post Leap Second 2012",
-//			sourceTime: "2012-07-01 00:00:00 UTC",
-//			targetZone: "Asia/Tokyo",
-//			expected:   "2012-07-01 09:00:00 JST",
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := conv.ConvertTimeZone(tt.sourceTime, tt.targetZone)
-//			assert.NoError(t, err)
-//			assert.Equal(t, tt.expected, result.Format("2006-01-02 15:04:05 MST"))
-//		})
-//	}
-//}
 
 func TestTimezoneFormatVariations(t *testing.T) {
 	conv := setupConverter()
@@ -1026,7 +848,6 @@ func TestTimezonePropertyBasedTimezones(t *testing.T) {
 	})
 }
 
-// valid
 func BenchmarkComplexScenarios(b *testing.B) {
 	conv := setupConverter()
 	scenarios := []struct {
