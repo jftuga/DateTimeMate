@@ -386,6 +386,34 @@ func TestDurSubUntil(t *testing.T) {
 	testDurSubUntil(t, from, until, period, allCorrectSub)
 }
 
+func TestDurPre1970(t *testing.T) {
+	t.Parallel()
+	// entirely before 1970: parsetime silently corrupted these dates
+	// before parseDateTime tried standard layouts first
+	testDurAddSubContains(t, "1950-01-01 12:00:00", "1 day 2 hours", "1950-01-02 14:00:00", "1949-12-31 10:00:00")
+	// crossing the unix epoch in both directions
+	testDurAddSubContains(t, "1970-01-01 00:00:00", "1h", "1970-01-01 01:00:00", "1969-12-31 23:00:00")
+}
+
+func TestDurPre1970Repeat(t *testing.T) {
+	t.Parallel()
+	from := "1969-12-31 22:00:00"
+	period := "1h"
+	repeat := 3
+	allCorrectAdd := []string{"1969-12-31 23:00:00", "1970-01-01 00:00:00", "1970-01-01 01:00:00"}
+	allCorrectSub := []string{"1969-12-31 21:00:00", "1969-12-31 20:00:00", "1969-12-31 19:00:00"}
+	testDurAddSubWithRepeat(t, from, period, allCorrectAdd, allCorrectSub, repeat)
+}
+
+func TestDurPre1970Until(t *testing.T) {
+	t.Parallel()
+	from := "1970-01-01 02:00:00"
+	period := "1h"
+	until := "1969-12-31 22:30:00"
+	allCorrectSub := []string{"1970-01-01 01:00:00", "1970-01-01 00:00:00", "1969-12-31 23:00:00"}
+	testDurSubUntil(t, from, until, period, allCorrectSub)
+}
+
 func TestDurRelativeUntil(t *testing.T) {
 	t.Parallel()
 	start := carbon.Now().StartOfDay()
