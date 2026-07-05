@@ -60,6 +60,19 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * * output: 2024-07-22 22:49:18
 </details>
 
+<details>
+<summary>7. Convert a date/time from one time zone to another?</summary>
+
+`dtmate tz "2024-01-15 12:00:00 UTC" America/New_York`
+* answer: `2024-01-15 07:00:00 EST`
+* zones can be given in multiple styles:
+* * IANA names such as `America/New_York`, `Asia/Kolkata`, `Australia/Eucla` *(preferred; these are DST aware)*
+* * abbreviations such as `EST`, `JST`, `pst` *(case-insensitive, fixed offsets)*
+* * UTC offsets in seconds, such as `19800` for UTC+5:30
+* pin ambiguous abbreviations with an environment variable: `DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai"`
+* list all supported abbreviations: `dtmate tz --list-zones`
+</details>
+
 ## Installation
 
 * Library: `go get -u github.com/jftuga/DateTimeMate`
@@ -152,6 +165,28 @@ fmt.Println(difference) // 45 minutes
 ```
 </details>
 
+<details>
+<summary>Example 6 - convert between time zones</summary>
+
+```go
+conv := DateTimeMate.NewTimeZoneConverter(
+	DateTimeMate.TimeZoneConverterWithZoneAbbrevs(DateTimeMate.LoadZoneDefinitions()))
+result, err := conv.ConvertTimeZone("2024-01-15 12:00:00 UTC", "America/New_York")
+if err != nil { ... }
+fmt.Println(result.Format("2006-01-02 15:04:05 MST")) // 2024-01-15 07:00:00 EST
+
+// pin ambiguous abbreviations to a specific IANA zone
+aliases, err := DateTimeMate.ParseZoneAliases("IST=Asia/Jerusalem")
+if err != nil { ... }
+conv = DateTimeMate.NewTimeZoneConverter(
+	DateTimeMate.TimeZoneConverterWithZoneAbbrevs(DateTimeMate.LoadZoneDefinitions()),
+	DateTimeMate.TimeZoneConverterWithAliases(aliases))
+result, err = conv.ConvertTimeZone("2024-07-15 12:00:00 UTC", "IST")
+if err != nil { ... }
+fmt.Println(result.Format("2006-01-02 15:04:05 MST")) // 2024-07-15 15:00:00 IDT
+```
+</details>
+
 
 See also the [example](cmd/example/main.go) program.
 
@@ -162,7 +197,7 @@ See also the [example](cmd/example/main.go) program.
 <summary>Show</summary>
 
 ```
-dtmate: output the difference between date, time or duration
+Compute date/time differences, durations, conversions, and reformatting
 
 Usage:
   dtmate [flags]
@@ -173,50 +208,20 @@ Available Commands:
   diff        Output the difference between two date/times
   dur         Output a date/time when given a starting date/time and duration
   durmath     Add or subtract two durations
-  fmt         reformat a date/time
+  fmt         Reformat a date/time
   help        Help about any command
+  tz          Convert a date/time from one time zone to another
 
 Flags:
   -e, --examples    show command-line examples
   -h, --help        help for dtmate
+      --help-all    show help plus duration syntax, brief units, and conversion notes
   -n, --nonewline   do not output a newline character
   -v, --version     version for dtmate
 
 Use "dtmate [command] --help" for more information about a command.
 
----
-
-Durations:
-years weeks days
-hours minutes seconds milliseconds microseconds nanoseconds
-example: '1 year 3 days 4 hours 1 minute 6 seconds'
-
----
-
-Brief Durations:
-(dates are always uppercase, times are always lowercase)
-Y    W    D
-h    m    s    ms    us    ns
-examples: 1Y3W4D5h6m7s8ms9us1ns, '1Y 3W 4D 5h 6m 7s 8ms 9us 1ns'
-
----
-
-Relative Date Shortcuts:
-now
-today (returns same value as now)
-yesterday (exactly 24 hours behind of the current time)
-tomorrow (exactly 24 hours ahead the current time)
-example: dtmate dur today 7h10m -a -u tomorrow
-
----
-
-Conversions:
-1 year is equal to 365.25 days
-Months are not a unit since their lengths vary between 28 and 31 days
-Separate sub-second brief units with a dot
-example: dtmate conv 4321s123456789ns hms.msusns
-Use -d to show the smallest unit with decimal places, rounded
-example: dtmate diff 2023-10-17 2026-07-04 -c Y -d 2  =>  2.71 years
+Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
 ```
 
 </details>
@@ -452,6 +457,57 @@ $ dtmate fmt 1704085262 "%F %T"
 # also from milliseconds
 $ dtmate fmt 1704085262999 "%F %T"
 2024-01-01 00:01:02
+
+########################### "dtmate tz" examples ###########################
+
+# convert using IANA zone names (preferred; these are DST aware)
+$ dtmate tz "2024-01-15 12:00:00 UTC" America/New_York
+2024-01-15 07:00:00 EST
+
+# the same source in July automatically yields daylight time
+$ dtmate tz "2024-07-04 08:00:00 EDT" Europe/Paris
+2024-07-04 14:00:00 CEST
+
+# abbreviations work for both the source and the target
+$ dtmate tz "2024-01-15 09:00:00 PST" JST
+2024-01-16 02:00:00 JST
+
+# abbreviations are case-insensitive
+$ dtmate tz "2024-01-15 12:00:00 UTC" jst
+2024-01-15 21:00:00 JST
+
+# a zone-less source is interpreted as local time
+$ dtmate tz "2024-01-15 12:00:00" UTC
+2024-01-15 17:00:00 UTC
+
+# a UTC offset in seconds is also accepted (19800 = UTC+5:30)
+$ dtmate tz "2024-01-15 12:00:00 UTC" 19800
+2024-01-15 17:30:00 UTC+5
+
+# ambiguous abbreviations warn on stderr and use their primary meaning
+$ dtmate tz "2024-01-15 12:00:00 UTC" IST
+warning: IST is ambiguous: using India Standard Time (UTC+05:30), not Israel Standard Time (UTC+2), Irish Standard Time (UTC+1); set DTMATE_TZ_ALIASES="IST=<IANA zone>" to override
+2024-01-15 17:30:00 IST
+
+# pin an ambiguous abbreviation to an IANA zone; aliases stay DST aware
+$ DTMATE_TZ_ALIASES="IST=Asia/Jerusalem" dtmate tz "2024-07-15 12:00:00 UTC" IST
+2024-07-15 15:00:00 IDT
+
+# multiple aliases are pipe-delimited
+$ DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai" dtmate tz "2024-01-15 12:00:00 UTC" CST
+2024-01-15 20:00:00 CST
+
+# list the supported abbreviations
+$ dtmate tz --list-zones
+ACDT   UTC+10:30  Australian Central Daylight Time
+ACST   UTC+09:30  Australian Central Standard Time
+ACWST  UTC+08:45  Australian Central Western Standard Time
+...
+
+# date/times before 1970 are rejected by default because time zone
+# data is unreliable before then; use --force to convert anyway
+$ dtmate tz --force "1900-02-28 23:59:59 UTC" Europe/London
+1900-02-28 23:59:59 GMT
 ```
 </details>
 
