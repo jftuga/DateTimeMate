@@ -15,10 +15,13 @@ DEFAULT_ZONEINFO = "/usr/share/zoneinfo"
 
 PREAMBLE = """package DateTimeMate
 
+//go:generate python3 tools/generate_zone_names.py -o zone_names.go
+
 // ianaZoneNames lists the IANA time zone names known at generation time;
 // ListIANAZones validates each against the time zone database in use, so
-// stale entries are filtered out at runtime. Regenerate on macOS/Linux with:
-// tools/generate_zone_names.py
+// stale entries are filtered out at runtime. Regenerate on macOS/Linux
+// (e.g. after a Go toolchain bump updates the embedded tzdata) with:
+// go generate ./...
 var ianaZoneNames = []string{
 """
 
