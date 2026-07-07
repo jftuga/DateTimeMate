@@ -1,6 +1,9 @@
 package DateTimeMate
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func testConv(t *testing.T, source, target string, brief bool, correct string) {
 	t.Helper()
@@ -116,9 +119,9 @@ func TestConvInvalidInput(t *testing.T) {
 
 func TestConvEmptyTarget(t *testing.T) {
 	t.Parallel()
-	// an empty or whitespace-only target used to panic with an
+	// an empty, whitespace-only, or bare-dot target used to panic with an
 	// index-out-of-range error instead of returning an error
-	for _, target := range []string{"", "   "} {
+	for _, target := range []string{"", "   ", "."} {
 		conv := NewConv(ConvWithSource("90 minutes"), ConvWithTarget(target))
 		if _, err := conv.ConvertDuration(); err == nil {
 			t.Errorf("expected an error for empty target %q, got nil", target)
@@ -140,6 +143,104 @@ func TestConvMixedSignSource(t *testing.T) {
 	t.Parallel()
 	// a negative amount mid-string subtracts from the total
 	testConv(t, "1 year -30 days", "days", false, "335 days")
+}
+
+func TestConvNetNegative(t *testing.T) {
+	t.Parallel()
+	// a net-negative total renders with a leading "-" instead of
+	// silently collapsing to zero
+	testConv(t, "30 minutes -2 hours", "minutes", false, "-90 minutes")
+	testConv(t, "30 minutes -2 hours", "minutes", true, "-90m")
+	testConvDecimals(t, "30 minutes -2 hours", "hours", false, 2, "-1.50 hours")
+}
+
+func TestConvDecimalsCarry(t *testing.T) {
+	t.Parallel()
+	// rounding the smallest unit must carry into the larger units
+	// instead of printing a full-unit value such as "60.0 seconds"
+	testConvDecimals(t, "119.96 seconds", "minutes seconds", false, 1, "2 minutes 0.0 seconds")
+	testConvDecimals(t, "59.996 seconds", "minutes seconds", false, 2, "1 minute 0.00 seconds")
+	// no carry when the rounded value stays below the unit boundary
+	testConvDecimals(t, "119.94 seconds", "minutes seconds", false, 1, "1 minute 59.9 seconds")
+}
+
+func TestConvExactSubSecond(t *testing.T) {
+	t.Parallel()
+	// float-imprecise amounts must round to the nearest nanosecond, never
+	// truncate a whole unit away
+	testConv(t, "0.7 seconds", ".ms", false, "700 milliseconds")
+	testConv(t, "1µs", ".ns", false, "1000 nanoseconds")
+	testConv(t, "0.3 seconds -0.1 seconds", ".msusns", false, "200 milliseconds")
+	testConv(t, "0.7 hours", "minutes seconds", false, "42 minutes")
+}
+
+func TestConvRejectsNonFiniteAmounts(t *testing.T) {
+	t.Parallel()
+	// amounts are restricted to plain decimals: NaN, Inf, exponent, and
+	// hex float forms accepted by strconv.ParseFloat must all error
+	for _, source := range []string{"NaN seconds", "Inf seconds", "-Inf seconds", "1e2 seconds", "0x1p4 seconds", "+5 seconds"} {
+		conv := NewConv(ConvWithSource(source), ConvWithTarget("hours"))
+		if _, err := conv.ConvertDuration(); err == nil {
+			t.Errorf("Conv: expected an error for source %q, got nil", source)
+		}
+		dm := NewDurMath(DurMathWithFirst(source), DurMathWithSecond("1 hour"))
+		if _, err := dm.Add(); err == nil {
+			t.Errorf("DurMath: expected an error for first %q, got nil", source)
+		}
+	}
+}
+
+func TestConvBriefSubSecondTargets(t *testing.T) {
+	t.Parallel()
+	// a bare "ms" target keeps its historical minutes+seconds meaning for
+	// backward compatibility (with a stderr warning); "ns"/"us"/"µs" were
+	// never valid per-rune, so as whole tokens they mean that sub-second unit
+	testConv(t, "1h", "ms", false, "60 minutes")
+	testConv(t, "61 seconds", "ms", false, "1 minute 1 second")
+	testConv(t, "1 second", "ns", false, "1000000000 nanoseconds")
+	testConv(t, "1 second", "us", false, "1000000 microseconds")
+	testConv(t, "1 second", "µs", false, "1000000 microseconds")
+	testConv(t, "1 second", ".µs", false, "1000000 microseconds")
+	// pre-dot "ms" is per-rune minutes+seconds, as originally documented
+	testConv(t, "62s1ms1us1ns", "ms.msusns", false, "1 minute 2 seconds 1 millisecond 1 microsecond 1 nanosecond")
+	// combined targets are unchanged
+	testConv(t, "694861.001001001 seconds", "WDhms.msusns", false, "1 week 1 day 1 hour 1 minute 1 second 1 millisecond 1 microsecond 1 nanosecond")
+
+	// error cases: unknown pre-dot rune, unknown sub-second token, and a
+	// dangling dot must all name the offending part
+	cases := []struct{ target, contains string }{
+		{"h.zz", `"zz"`},
+		{"h.", "missing sub-second units"},
+		{"x", `"x"`},
+		{"h.mszz", `"zz"`},
+	}
+	for _, c := range cases {
+		conv := NewConv(ConvWithSource("90 minutes"), ConvWithTarget(c.target))
+		_, err := conv.ConvertDuration()
+		if err == nil {
+			t.Errorf("expected an error for target %q, got nil", c.target)
+		} else if !strings.Contains(err.Error(), c.contains) {
+			t.Errorf("error for target %q should contain %s, got: %v", c.target, c.contains, err)
+		}
+	}
+}
+
+func TestConvRangeLimit(t *testing.T) {
+	t.Parallel()
+	// large integral nanosecond amounts convert exactly (no float64 detour)
+	testConv(t, "1234567890987654321 nanoseconds", "nanoseconds", false, "1234567890987654321 nanoseconds")
+	// the diff -c path feeds "<n> nanoseconds" through Conv; a 365-day span
+	// must come out as exactly 8760 hours
+	testConv(t, "31536000000000000 nanoseconds", "hours", false, "8760 hours")
+	// totals beyond int64 nanoseconds (about +/-292 years) error
+	for _, source := range []string{"1000 years", "9223372036854775808 nanoseconds", "300 years 300 years"} {
+		conv := NewConv(ConvWithSource(source), ConvWithTarget("hours"))
+		if _, err := conv.ConvertDuration(); err == nil {
+			t.Errorf("expected a range error for source %q, got nil", source)
+		}
+	}
+	// just inside the range still works
+	testConv(t, "292 years", "years", false, "292 years")
 }
 
 func TestConvZeroResult(t *testing.T) {
@@ -262,19 +363,19 @@ func TestConvMsUsNs(t *testing.T) {
 	t.Parallel()
 	source := "4321s123456789ns"
 	target := "hms.msusns"
-	correct := "1 hour 12 minutes 1 second 123 milliseconds 456 microseconds 788 nanoseconds"
+	correct := "1 hour 12 minutes 1 second 123 milliseconds 456 microseconds 789 nanoseconds"
 	testConv(t, source, target, false, correct)
 
 	source = "-4321s123456789ns"
-	correct = "-1 hour 12 minutes 1 second 123 milliseconds 456 microseconds 788 nanoseconds"
+	correct = "-1 hour 12 minutes 1 second 123 milliseconds 456 microseconds 789 nanoseconds"
 	testConv(t, source, target, false, correct)
 
 	source = "4321s123456789ns"
-	correct = "1h12m1s123ms456us788ns"
+	correct = "1h12m1s123ms456us789ns"
 	testConv(t, source, target, true, correct)
 
 	source = "-4321s123456789ns"
-	correct = "-1h12m1s123ms456us788ns"
+	correct = "-1h12m1s123ms456us789ns"
 	testConv(t, source, target, true, correct)
 
 	source = "4321s001001001ns"
@@ -298,19 +399,19 @@ func TestConvNanoseconds1(t *testing.T) {
 	t.Parallel()
 	source := "1234567890987654321ns"
 	target := "YWDhms.msusns"
-	correct := "39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 447 nanoseconds"
+	correct := "39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 321 nanoseconds"
 	testConv(t, source, target, false, correct)
 
 	source = "-1234567890987654321ns"
-	correct = "-39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 447 nanoseconds"
+	correct = "-39 years 6 weeks 2 days 5 hours 31 minutes 30 seconds 987 milliseconds 654 microseconds 321 nanoseconds"
 	testConv(t, source, target, false, correct)
 
 	source = "1234567890987654321ns"
-	correct = "39Y6W2D5h31m30s987ms654us447ns"
+	correct = "39Y6W2D5h31m30s987ms654us321ns"
 	testConv(t, source, target, true, correct)
 
 	source = "-1234567890987654321ns"
-	correct = "-39Y6W2D5h31m30s987ms654us447ns"
+	correct = "-39Y6W2D5h31m30s987ms654us321ns"
 	testConv(t, source, target, true, correct)
 }
 

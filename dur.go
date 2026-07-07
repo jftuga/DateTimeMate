@@ -34,7 +34,8 @@ const (
 	expanded string = `(?:^|\s)(\d+(?:\.\d+)?)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
 	hintMsg  string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
 
-	// maxUntilIterations is a backstop against unbounded output from the until option
+	// maxUntilIterations is a backstop against unbounded output from the
+	// until and repeat options
 	maxUntilIterations = 1_000_000
 )
 
@@ -122,6 +123,9 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 	if dur.Repeat < 0 {
 		return nil, fmt.Errorf("repeat must not be negative: %d", dur.Repeat)
 	}
+	if dur.Repeat > maxUntilIterations {
+		return nil, fmt.Errorf("repeat must not exceed %d results: %d", maxUntilIterations, dur.Repeat)
+	}
 	if dur.Repeat > 0 && dur.Until != "" {
 		return nil, fmt.Errorf("repeat & until are mutually exclusive")
 	}
@@ -160,6 +164,14 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 		u, err := parseDateTimeOrUnix(dur.Until)
 		if err != nil {
 			return nil, err
+		}
+		// the until date/time must lie in the direction of travel, otherwise
+		// the loop would exit immediately with an empty result and no error
+		if opAdd == op && !u.After(f) {
+			return nil, fmt.Errorf("until date/time %q is not after from %q", dur.Until, dur.From)
+		}
+		if opSub == op && !u.Before(f) {
+			return nil, fmt.Errorf("until date/time %q is not before from %q", dur.Until, dur.From)
 		}
 		to := from
 		for i := 0; ; i++ {
@@ -210,8 +222,11 @@ func (dur *Dur) renderResults(all []carbon.Carbon) ([]string, error) {
 }
 
 // parsePeriod parses a period in either long or brief format into
-// (amount, unit) pairs, erroring if any part of the period is not understood
+// (amount, unit) pairs, erroring if any part of the period is not
+// understood; error messages quote the caller's original input, never the
+// internal brief-to-long expansion
 func parsePeriod(period string) ([][2]string, error) {
+	original := period
 	indexes := expandedRegexp.FindAllStringSubmatchIndex(period, -1)
 	if len(indexes) == 0 {
 		// brief format is being used so first expand it to the long format
@@ -222,7 +237,7 @@ func parsePeriod(period string) ([][2]string, error) {
 		}
 		indexes = expandedRegexp.FindAllStringSubmatchIndex(period, -1)
 		if len(indexes) == 0 {
-			return nil, fmt.Errorf("[parsePeriod] Invalid duration: %s", period)
+			return nil, fmt.Errorf("[parsePeriod] Invalid duration: %s", original)
 		}
 	}
 
@@ -238,7 +253,7 @@ func parsePeriod(period string) ([][2]string, error) {
 	}
 	leftover.WriteString(period[prev:])
 	if remains := strings.TrimSpace(leftover.String()); remains != "" {
-		return nil, fmt.Errorf("[parsePeriod] Invalid duration %q in: %s. %s", remains, period, hintMsg)
+		return nil, fmt.Errorf("[parsePeriod] Invalid duration %q in: %s. %s", remains, original, hintMsg)
 	}
 	return matches, nil
 }
@@ -274,34 +289,43 @@ func applyPeriod(to carbon.Carbon, periodMatches [][2]string, index int) (carbon
 // only allow one replacement per each period
 // Ex: 1h2m3s => 1 hour 2 minutes 3 seconds
 func expandPeriod(period string) (string, error) {
+	// the intermediate placeholders are control characters, which cannot
+	// appear in legitimate input; reject them up front so they can never
+	// be smuggled in as unit names
+	for _, ch := range period {
+		if ch < 0x20 && ch != '\t' {
+			return "", fmt.Errorf("[expandPeriod] Invalid period: %s. %s", period, hintMsg)
+		}
+	}
+
 	// a direct string replace will not work because some
 	// periods have overlapping strings, such as 's' with 'ms, 'us', 'ns'
 	// therefore convert each period to a unique string first
 	s := period
-	s = strings.Replace(s, "ns", "α", 1)
-	s = strings.Replace(s, "us", "β", 1)
-	s = strings.Replace(s, "µs", "β", 1)
-	s = strings.Replace(s, "ms", "γ", 1)
-	s = strings.Replace(s, "s", "δ", 1)
-	s = strings.Replace(s, "m", "ε", 1)
-	s = strings.Replace(s, "h", "ζ", 1)
-	s = strings.Replace(s, "D", "η", 1)
-	s = strings.Replace(s, "W", "θ", 1)
+	s = strings.Replace(s, "ns", "\x01", 1)
+	s = strings.Replace(s, "us", "\x02", 1)
+	s = strings.Replace(s, "µs", "\x02", 1)
+	s = strings.Replace(s, "ms", "\x03", 1)
+	s = strings.Replace(s, "s", "\x04", 1)
+	s = strings.Replace(s, "m", "\x05", 1)
+	s = strings.Replace(s, "h", "\x06", 1)
+	s = strings.Replace(s, "D", "\x07", 1)
+	s = strings.Replace(s, "W", "\x08", 1)
 	// Month (M) not supported
-	s = strings.Replace(s, "Y", "λ", 1)
+	s = strings.Replace(s, "Y", "\x0b", 1)
 
 	// now convert from the unique string back to the corresponding duration
 	p := s
-	p = strings.Replace(p, "α", " nanoseconds ", 1)
-	p = strings.Replace(p, "β", " microseconds ", 1)
-	p = strings.Replace(p, "γ", " milliseconds ", 1)
-	p = strings.Replace(p, "δ", " seconds ", 1)
-	p = strings.Replace(p, "ε", " minutes ", 1)
-	p = strings.Replace(p, "ζ", " hours ", 1)
-	p = strings.Replace(p, "η", " days ", 1)
-	p = strings.Replace(p, "θ", " weeks ", 1)
+	p = strings.Replace(p, "\x01", " nanoseconds ", 1)
+	p = strings.Replace(p, "\x02", " microseconds ", 1)
+	p = strings.Replace(p, "\x03", " milliseconds ", 1)
+	p = strings.Replace(p, "\x04", " seconds ", 1)
+	p = strings.Replace(p, "\x05", " minutes ", 1)
+	p = strings.Replace(p, "\x06", " hours ", 1)
+	p = strings.Replace(p, "\x07", " days ", 1)
+	p = strings.Replace(p, "\x08", " weeks ", 1)
 	// Month (M) not supported
-	p = strings.Replace(p, "λ", " years ", 1)
+	p = strings.Replace(p, "\x0b", " years ", 1)
 
 	// ensure each time & period was successfully replaced
 	// len of Fields should always be even because is part

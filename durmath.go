@@ -128,9 +128,9 @@ func checkNegativeDuration(source string) error {
 	return nil
 }
 
-// compute parses both operands, adds or subtracts them, and formats the
-// signed result; the absolute value is formatted and a leading "-" is
-// prepended when the result is negative
+// compute parses both operands into integer nanoseconds, adds or subtracts
+// them, and formats the signed result; a negative result is rendered with
+// a leading "-" unless Absolute is set
 func (dm *DurMath) compute(subtract bool) (string, error) {
 	if dm.Decimals < 0 || dm.Decimals > 9 {
 		return "", fmt.Errorf("decimals must be between 0 and 9: %d", dm.Decimals)
@@ -141,26 +141,29 @@ func (dm *DurMath) compute(subtract bool) (string, error) {
 	if err := checkNegativeDuration(dm.Second); err != nil {
 		return "", err
 	}
-	first, err := parseDurationSeconds(dm.First)
+	first, err := parseDurationNanos(dm.First)
 	if err != nil {
 		return "", fmt.Errorf("first duration: %w", err)
 	}
-	second, err := parseDurationSeconds(dm.Second)
+	second, err := parseDurationNanos(dm.Second)
 	if err != nil {
 		return "", fmt.Errorf("second duration: %w", err)
 	}
 
-	result := first + second
 	if subtract {
-		result = first - second
+		second = -second
 	}
-	abs := math.Abs(result)
-	if math.Round(abs*1e9) == 0 {
-		// snap float noise below half a nanosecond to exactly zero so a
-		// zero result renders as "0 seconds", never "-0 seconds"
-		result, abs = 0, 0
+	result, err := addInt64Checked(first, second)
+	if err != nil {
+		return "", err
 	}
-	negative := result < 0
+	if result == math.MinInt64 {
+		// the one value whose negation overflows
+		return "", errDurationRange
+	}
+	if dm.Absolute && result < 0 {
+		result = -result
+	}
 
 	units := durMathDefaultUnits
 	if dm.Target != "" {
@@ -168,24 +171,16 @@ func (dm *DurMath) compute(subtract bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
-	} else {
-		// extend with sub-second units only when a sub-second remainder
-		// survives rounding to whole nanoseconds, so binary float residue
-		// does not trigger a bogus extension
-		frac := abs - math.Floor(abs)
-		if r := math.Round(frac * 1e9); r >= 1 && r < 1e9 {
-			units = durMathAllUnits
-		}
+	} else if result%nanosPerSecond != 0 {
+		// extend with sub-second units only when the result carries a
+		// sub-second remainder
+		units = durMathAllUnits
 	}
 
 	formatter := &Conv{Decimals: dm.Decimals}
-	out := formatter.formatTarget(abs, units)
+	out := formatter.formatTarget(result, units)
 	if dm.Brief {
 		out = shrinkPeriod(out)
 	}
-	out = strings.TrimSpace(out)
-	if negative && !dm.Absolute {
-		out = "-" + out
-	}
-	return out, nil
+	return strings.TrimSpace(out), nil
 }

@@ -48,6 +48,21 @@ func TestDiffSignedResult(t *testing.T) {
 	testDiffAbsolute(t, "15:30:45", "12:00:00", true, false, "-3h30m45s", true)
 }
 
+func TestDiffSubMicrosecond(t *testing.T) {
+	t.Parallel()
+	// durafmt drops sub-microsecond remainders, so they are appended as
+	// nanoseconds; a sub-microsecond diff used to render as an empty string
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000005Z", false, "500 nanoseconds")
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000015Z", false, "1 microsecond 500 nanoseconds")
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000015Z", true, "1us500ns")
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.000000001Z", false, "1 nanosecond")
+	// negative sub-microsecond diffs carry the sign on the leading term
+	testDiffAbsolute(t, "2024-06-07T08:00:00.0000005Z", "2024-06-07T08:00:00Z", false, false, "-500 nanoseconds", true)
+	// whole-microsecond and zero diffs are unchanged
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.000002Z", false, "2 microseconds")
+	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00Z", false, "0 seconds")
+}
+
 func TestDiffAbsoluteResult(t *testing.T) {
 	t.Parallel()
 	// Absolute makes both the formatted string and the returned duration positive
@@ -156,6 +171,19 @@ func TestDiffYearOverflow(t *testing.T) {
 	_, _, err := diff.CalculateDiff()
 	if err == nil {
 		t.Error("expected error for year difference exceeding 291 years")
+	}
+
+	// a span inside time.Duration's range is representable even when the
+	// calendar years differ by more than 291 (the old guard rejected this)
+	diff = NewDiff(
+		DiffWithStart("2000-12-31"),
+		DiffWithEnd("2292-01-01"))
+	_, duration, err := diff.CalculateDiff()
+	if err != nil {
+		t.Errorf("expected a ~291-year span to be accepted, got: %v", err)
+	}
+	if duration <= 0 {
+		t.Errorf("expected a positive duration, got: %v", duration)
 	}
 }
 

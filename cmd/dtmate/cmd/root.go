@@ -25,9 +25,18 @@ RELATIVE DATE SHORTCUTS
   tomorrow         exactly 24 hours after now
   example: dtmate dur today 7h10m -a -u tomorrow
 
+DATE PARSING
+  slash dates default to US order: 01/02/2024 is January 2
+  set DTMATE_DATE_ORDER=DMY for day/month/year, or MDY to silence the warning
+  pure integers: 10 digits are unix seconds, 13 unix milliseconds;
+    4, 8, and 14 digits are a year, compact date, and compact date/time
+
 CONVERSION NOTES
   1 year equals 365.25 days
   months are not a unit; their lengths vary between 28 and 31 days
+  durations are limited to about +/-292 years
+  a lone ns or us target means that sub-second unit; a lone ms target
+    means minutes+seconds and warns (use .ms for milliseconds)
   separate sub-second brief target units with a dot:
     dtmate conv 4321s123456789ns hms.msusns
   use -d to round the smallest unit to N decimal places:

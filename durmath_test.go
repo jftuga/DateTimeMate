@@ -134,6 +134,11 @@ func TestDurMathSubSecond(t *testing.T) {
 	testDurMath(t, "1 second", "500 milliseconds", false, false, "1 second 500 milliseconds", "500 milliseconds")
 	// whole-second results stay at second granularity
 	testDurMath(t, "750 milliseconds", "250 milliseconds", false, false, "1 second", "500 milliseconds")
+	// float-imprecise operands round to the nearest nanosecond, so the
+	// result is exact instead of 199ms 999us 999ns
+	testDurMath(t, "0.3 seconds", "0.1 seconds", false, false, "400 milliseconds", "200 milliseconds")
+	// decimals rounding carries into the larger unit
+	testDurMathConv(t, "1 minute 59.96 seconds", "0 seconds", "minutes seconds", false, 1, false, "2 minutes 0.0 seconds", "2 minutes 0.0 seconds")
 }
 
 func TestDurMathZeroResult(t *testing.T) {
@@ -156,6 +161,7 @@ func TestDurMathInvalidInput(t *testing.T) {
 		{name: "empty first", first: "", second: "1 hour"},
 		{name: "empty second", first: "1 hour", second: ""},
 		{name: "whitespace-only target", first: "1 hour", second: "1 hour", target: "   "},
+		{name: "bare-dot target", first: "1 hour", second: "1 hour", target: "."},
 		{name: "month in first", first: "1 month", second: "1 hour"},
 		{name: "month in second", first: "1 hour", second: "1 month"},
 		{name: "decimals below range", first: "1 hour", second: "1 hour", target: "hours", decimals: -1},

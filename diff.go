@@ -2,7 +2,6 @@ package DateTimeMate
 
 import (
 	"fmt"
-	"github.com/golang-module/carbon/v2"
 	"github.com/hako/durafmt"
 	"time"
 )
@@ -54,44 +53,58 @@ func (diff *Diff) String() string {
 	return fmt.Sprintf("Start:%v End:%v Brief:%v Absolute:%v", diff.Start, diff.End, diff.Brief, diff.Absolute)
 }
 
-// parseDiffTime parses one side of a diff: 10-digit (seconds) and 13-digit
-// (milliseconds) integers are treated as Unix timestamps; anything else is
-// parsed with carbon first, falling back to parsetime if carbon fails
-func parseDiffTime(source string) (time.Time, error) {
-	if isUnixTimestamp(source) {
-		return unixStringToTime(source)
-	}
-	converted := ConvertRelativeDateToActual(source)
-	if c := carbon.Parse(converted); c.Error == nil {
-		return c.StdTime(), nil
-	}
-	return parseDateTime(converted)
-}
-
-// CalculateDiff return the time difference and also set dt.Diff
-// first try to parse with carbon, fallback to parsing with parsetime if carbon fails to parse
+// CalculateDiff returns the time difference between Start and End, both as
+// a formatted string and as a time.Duration; both sides are parsed with the
+// same shared chain used by every other sub-command (parseDateTimeOrUnix)
 // when Absolute is set, both the formatted string and the returned duration are non-negative
 func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
-	start, err := parseDiffTime(diff.Start)
+	start, err := parseDateTimeOrUnix(diff.Start)
 	if err != nil {
 		return "", 0, err
 	}
-	end, err := parseDiffTime(diff.End)
+	end, err := parseDateTimeOrUnix(diff.End)
 	if err != nil {
 		return "", 0, err
-	}
-
-	yearDiff := end.Year() - start.Year()
-	if yearDiff > 291 || yearDiff < -291 {
-		return "", 0, fmt.Errorf("year difference of %d exceeds 291 year maximum", yearDiff)
 	}
 
 	duration := end.Sub(start)
+	// time.Time.Sub silently clamps a difference that overflows
+	// time.Duration, so detect saturation by checking the round trip; this
+	// accepts every representable span (about +/-292 years) instead of
+	// rejecting by calendar-year count
+	if !start.Add(duration).Equal(end) {
+		return "", 0, fmt.Errorf("difference between %q and %q exceeds the representable range of about 292 years", diff.Start, diff.End)
+	}
 	if diff.Absolute {
 		duration = duration.Abs()
 	}
 	parsed := durafmt.Parse(duration)
 	difference := fmt.Sprintf("%v", parsed)
+	// durafmt's smallest unit is the microsecond, so append any
+	// sub-microsecond remainder: a 1500ns diff renders as
+	// "1 microsecond 500 nanoseconds" and a sub-microsecond diff is a
+	// nanosecond count instead of an empty string
+	if rem := duration % time.Microsecond; rem != 0 {
+		ns := rem.Nanoseconds()
+		if ns < 0 {
+			ns = -ns
+		}
+		unit := "nanoseconds"
+		if ns == 1 {
+			unit = "nanosecond"
+		}
+		nsPart := fmt.Sprintf("%d %s", ns, unit)
+		// durafmt renders a sub-microsecond duration as "" ("-" when
+		// negative), so the nanosecond count becomes the whole output
+		if difference == "" || difference == "-" {
+			if duration < 0 {
+				nsPart = "-" + nsPart
+			}
+			difference = nsPart
+		} else {
+			difference += " " + nsPart
+		}
+	}
 	if diff.Brief {
 		difference = shrinkPeriod(difference)
 	}
