@@ -235,6 +235,35 @@ Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
 **Note:** The `-n` switch along with `-r` will emit a comma-delimited output
 * * Example: `dtmate dur now 1h -a -n -r 3`
 
+## Date and Duration Parsing Notes
+
+* **Slash dates** default to US order, month first: `01/02/2024` is January 2.
+* * Set `DTMATE_DATE_ORDER=DMY` for day/month/year, or `MDY` to silence the
+    ambiguity warning; a field greater than 12 (such as `25/12/2024`)
+    disambiguates on its own.
+* **Pure integers** parse by digit count: 10 digits are Unix seconds, 13 are
+  Unix milliseconds, while 4, 8, and 14 digits are a year (`2024`), a compact
+  date (`20240101`), and a compact date/time (`20240101080102`); 11, 12, and
+  other digit counts are ambiguous and rejected.
+* **Negative timestamps** are rejected everywhere; pre-1970 date/times are
+  fully supported through normal date strings such as `1950-01-01`.
+* **Relative dates**: `yesterday` and `tomorrow` are exactly 24 hours from
+  now, even across daylight saving transitions.
+* **Duration amounts** must be plain decimals (`90`, `1.5`, and mid-string
+  negatives such as `1 year -30 days` in `conv`); `NaN`, `Inf`, exponent
+  (`1e2`), and hex (`0x1p4`) forms are rejected.
+* **Duration range and precision**: durations are computed in integer
+  nanoseconds, so integral amounts are exact; fractional amounts carry
+  float64 precision (about 15-16 significant digits); totals are limited to
+  about +/-292 years.
+* **Brief sub-second targets**: a lone `us` or `ns` target means that
+  sub-second unit; a lone `ms` keeps its historical minutes+seconds meaning
+  and warns on stderr (use `.ms` or `milliseconds` for milliseconds);
+  combine larger and sub-second units with a dot, such as `ms.msusns`.
+* **Repeat and until**: `-r` is capped at 1,000,000 results, and `-u` must
+  lie in the direction of travel (after the start when adding, before it
+  when subtracting).
+
 ## Command Line Examples
 
 <details>
@@ -269,8 +298,14 @@ $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00
 5 hours 5 minutes 5 seconds
 
 # same input, also convert duration to minutes and seconds
+# a bare "ms" target warns on stderr because ms means milliseconds elsewhere
 $ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00 -c ms
+warning: target "ms" is ambiguous: interpreting as minutes+seconds; use ".ms" or "milliseconds" for milliseconds
 305 minutes 5 seconds
+
+# a dot selects sub-second units: .ms is milliseconds, no warning
+$ dtmate diff 2024-06-07T08:00:00Z 2024-06-07T08:05:05-05:00 -c .ms
+18305000 milliseconds
 
 # convert to a single unit, showing 2 decimal places
 # without -d, this would truncate to just: 2 years
@@ -279,7 +314,7 @@ $ dtmate diff 2023-10-17 2026-07-04 -c Y -d 2
 
 # differentiate sub-second durations with a dot
 # note the "ms" on both sides of the dot: minutes & seconds vs milliseconds
-$ diff now "2020-01-01 11:12:13.123456789" -c ms.msusns
+$ dtmate diff now "2020-01-01 11:12:13.123456789" -c ms.msusns
 -2566445 minutes 40 seconds 876 milliseconds 542 microseconds 985 nanoseconds
 
 # using a format which includes spaces
@@ -458,6 +493,19 @@ $ dtmate fmt 1704085262 "%F %T"
 # also from milliseconds
 $ dtmate fmt 1704085262999 "%F %T"
 2024-01-01 00:01:02
+
+# compact integer date/times: 4, 8, or 14 digits
+$ dtmate fmt 20240101080102 "%F %T"
+2024-01-01 08:01:02
+
+# ambiguous slash dates default to month/day/year and warn on stderr
+$ dtmate fmt 01/02/2024 "%F"
+warning: "01/02/2024" is ambiguous: interpreting as month/day/year; set DTMATE_DATE_ORDER=DMY to override
+2024-01-02
+
+# pin the order with an environment variable
+$ DTMATE_DATE_ORDER=DMY dtmate fmt 01/02/2024 "%F"
+2024-02-01
 
 ########################### "dtmate tz" examples ###########################
 

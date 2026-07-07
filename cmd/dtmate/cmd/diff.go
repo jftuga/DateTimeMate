@@ -92,13 +92,16 @@ func outputDiff(start, end string, brief bool) {
 		os.Exit(1)
 	}
 	diff := DateTimeMate.NewDiff(DateTimeMate.DiffWithStart(start), DateTimeMate.DiffWithEnd(end), DateTimeMate.DiffWithBrief(brief), DateTimeMate.DiffWithAbsolute(optDiffAbsolute))
-	result, _, err := diff.CalculateDiff()
+	result, duration, err := diff.CalculateDiff()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	if optDiffConv != "" {
-		result = convDuration(result, optDiffConv, optDiffBrief, optDiffDecimals)
+		// convert from the exact duration, not the human-readable string:
+		// the formatted string truncates sub-unit remainders and durafmt
+		// uses 365-day years while conv uses 365.25
+		result = convDuration(fmt.Sprintf("%d nanoseconds", duration.Nanoseconds()), optDiffConv, optDiffBrief, optDiffDecimals)
 	}
 	if optRootNoNewline {
 		fmt.Print(result)

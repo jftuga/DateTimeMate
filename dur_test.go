@@ -195,6 +195,61 @@ func TestDurNegativeRepeat(t *testing.T) {
 	}
 }
 
+func TestDurRepeatCap(t *testing.T) {
+	t.Parallel()
+	// repeat is capped like until, so a huge repeat errors immediately
+	// instead of allocating one result per iteration
+	dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur("1 second"), DurWithRepeat(1_000_001))
+	if _, err := dur.Add(); err == nil {
+		t.Error("expected an error for a repeat above the cap, got nil")
+	}
+}
+
+func TestDurUntilWrongSide(t *testing.T) {
+	t.Parallel()
+	// an until date/time opposite the direction of travel errors instead
+	// of returning an empty result with a nil error
+	dur := NewDur(DurWithFrom("2024-06-01"), DurWithDur("1 day"), DurWithUntil("2024-01-01"))
+	if _, err := dur.Add(); err == nil {
+		t.Error("Add: expected an error for an until before from, got nil")
+	}
+	dur = NewDur(DurWithFrom("2024-01-01"), DurWithDur("1 day"), DurWithUntil("2024-06-01"))
+	if _, err := dur.Sub(); err == nil {
+		t.Error("Sub: expected an error for an until after from, got nil")
+	}
+	// until equal to from is also an error: no result can be produced
+	dur = NewDur(DurWithFrom("2024-01-01"), DurWithDur("1 day"), DurWithUntil("2024-01-01"))
+	if _, err := dur.Add(); err == nil {
+		t.Error("Add: expected an error for an until equal to from, got nil")
+	}
+}
+
+func TestDurPlaceholderUnits(t *testing.T) {
+	t.Parallel()
+	// the brief-expansion placeholders must never be accepted as units:
+	// "1α" used to add one nanosecond and "2λ" two years
+	for _, period := range []string{"1α", "2λ", "1\x01", "2\x0b"} {
+		dur := NewDur(DurWithFrom("2024-01-01 00:00:00"), DurWithDur(period))
+		if _, err := dur.Add(); err == nil {
+			t.Errorf("expected an error for period %q, got nil", period)
+		}
+	}
+}
+
+func TestDurPeriodErrorQuotesInput(t *testing.T) {
+	t.Parallel()
+	// error messages quote the original input, not the internal
+	// brief-to-long expansion with its doubled spaces
+	dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur("2 h"))
+	_, err := dur.Add()
+	if err == nil {
+		t.Fatal("expected an error for period \"2 h\", got nil")
+	}
+	if !strings.Contains(err.Error(), "2 h") || strings.Contains(err.Error(), "hours") {
+		t.Errorf("error should quote the original input, got: %v", err)
+	}
+}
+
 func TestDurZeroPeriodUntil(t *testing.T) {
 	t.Parallel()
 	// a period that does not advance must error instead of looping forever
