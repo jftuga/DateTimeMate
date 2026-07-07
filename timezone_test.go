@@ -234,13 +234,13 @@ func TestTimezoneNumericOffsets(t *testing.T) {
 			name:       "UTC to +0530",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "19800", // +5:30 in seconds
-			expected:   "2024-01-15 17:30:00 UTC+5",
+			expected:   "2024-01-15 17:30:00 UTC+05:30",
 		},
 		{
 			name:       "UTC to -0930",
 			sourceTime: "2024-01-15 12:00:00 UTC",
 			targetZone: "-34200", // -9:30 in seconds
-			expected:   "2024-01-15 02:30:00 UTC-9",
+			expected:   "2024-01-15 02:30:00 UTC-09:30",
 		},
 	}
 

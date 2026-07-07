@@ -23,7 +23,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.13.0"
+	ModVersion string = "1.14.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -138,6 +138,26 @@ var wallClockLayouts = []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05", "2
 // the result (e.g. reformatting "...Z" with %Z must print UTC, not local)
 var zonedLayouts = []string{time.RFC3339Nano, "2006-01-02 15:04:05 -0700 MST", "2006-01-02 15:04:05 -0700", "2006-01-02 15:04:05 MST", time.UnixDate, time.RFC1123Z, time.RFC1123, time.RubyDate}
 
+// zeroOffsetZoneNames holds the zone names that legitimately denote UTC+0
+// in a parsed date/time: the empty name of a bare numeric offset plus the
+// zero-offset abbreviations from the zone table; time.Parse fabricates a
+// zero-offset zone for any abbreviation not defined in the local time
+// zone, so a zero offset under any other name signals a fabricated,
+// silently-wrong parse
+var zeroOffsetZoneNames = buildZeroOffsetZoneNames()
+
+// buildZeroOffsetZoneNames collects the legitimate zero-offset zone names
+// from LoadZoneDefinitions
+func buildZeroOffsetZoneNames() map[string]bool {
+	names := map[string]bool{"": true}
+	for abbrev, def := range LoadZoneDefinitions() {
+		if def.Offset == 0 {
+			names[abbrev] = true
+		}
+	}
+	return names
+}
+
 // isAllDigits reports whether s is non-empty and contains only ASCII digits
 func isAllDigits(s string) bool {
 	if s == "" {
@@ -241,7 +261,21 @@ func parseDateTime(source string) (time.Time, error) {
 	}
 	for _, layout := range zonedLayouts {
 		if t, err := time.Parse(layout, source); err == nil {
-			return t, nil
+			name, offset := t.Zone()
+			if offset != 0 || zeroOffsetZoneNames[strings.ToUpper(name)] {
+				return t, nil
+			}
+			// time.Parse fabricates a zero offset for any zone token it
+			// cannot resolve; ±NN tokens (e.g. "+08") carry their real
+			// offset in the digits, so re-stamp the wall clock into the
+			// zone they actually name instead of keeping the wrong instant
+			if loc, shaped, serr := parseOffsetSuffix(name); shaped {
+				if serr != nil {
+					return time.Time{}, serr
+				}
+				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
+			}
+			return time.Time{}, fmt.Errorf("zone abbreviation %q is not resolvable in this input position", name)
 		}
 	}
 	if t, claimed, err := parseSlashDate(source); claimed {
@@ -386,10 +420,10 @@ func isUnixTimestamp(s string) bool {
 
 // parseIntegerDateTime parses a pure-integer date/time that is not a Unix
 // timestamp: 4 digits are a year, 8 digits a compact date, and 14 digits a
-// compact date/time, all interpreted in the local time zone; any other
+// compact date/time, all interpreted in the given time zone; any other
 // digit count errors rather than falling through to a parser that would
 // misread the digits as a time of day on the current date
-func parseIntegerDateTime(source string) (time.Time, error) {
+func parseIntegerDateTime(source string, loc *time.Location) (time.Time, error) {
 	var layout string
 	switch timestampDigits(source) {
 	case 4:
@@ -401,7 +435,7 @@ func parseIntegerDateTime(source string) (time.Time, error) {
 	default:
 		return time.Time{}, fmt.Errorf("ambiguous integer date/time %q: expected 4 digits (year), 8 (date), 10 (seconds), 13 (milliseconds), or 14 (date/time)", source)
 	}
-	t, err := time.ParseInLocation(layout, source, time.Local)
+	t, err := time.ParseInLocation(layout, source, loc)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("unable to parse integer date/time %q: %w", source, err)
 	}
@@ -422,7 +456,7 @@ func parseDateTimeOrUnix(source string) (time.Time, error) {
 		if isUnixTimestamp(source) {
 			return unixStringToTime(source)
 		}
-		return parseIntegerDateTime(source)
+		return parseIntegerDateTime(source, time.Local)
 	}
 	return parseDateTime(ConvertRelativeDateToActual(source))
 }
