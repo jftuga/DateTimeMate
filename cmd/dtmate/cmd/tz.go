@@ -21,7 +21,7 @@ var tzCmd = &cobra.Command{
 	Short: "Convert a date/time from one time zone to another",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if optTzListZones || optTzListIANA {
-			return nil
+			return cobra.NoArgs(cmd, args)
 		}
 		return cobra.ExactArgs(2)(cmd, args)
 	},
@@ -43,6 +43,7 @@ func init() {
 	tzCmd.Flags().BoolVarP(&optTzListZones, "list-zones", "l", false, "list the supported time zone abbreviations and exit")
 	tzCmd.Flags().BoolVarP(&optTzListIANA, "list-iana", "I", false, "list the IANA time zone names (e.g. America/New_York) and exit")
 	tzCmd.Flags().BoolVarP(&optTzForce, "force", "f", false, "convert date/times before 1970 despite unreliable time zone data")
+	tzCmd.MarkFlagsMutuallyExclusive("list-zones", "list-iana")
 }
 
 func newTimeZoneConverter() *DateTimeMate.TimeZoneConverter {
@@ -59,9 +60,6 @@ func newTimeZoneConverter() *DateTimeMate.TimeZoneConverter {
 
 func outputTzConversion(source, target string) {
 	tz := newTimeZoneConverter()
-	for _, warning := range tz.Warnings(source, target) {
-		fmt.Fprintln(os.Stderr, "warning:", warning)
-	}
 	result, err := tz.ConvertTimeZone(source, target)
 	if err != nil {
 		if errors.Is(err, DateTimeMate.ErrPre1970) {
@@ -71,7 +69,10 @@ func outputTzConversion(source, target string) {
 		}
 		os.Exit(1)
 	}
-	formatted := result.Format("2006-01-02 15:04:05 MST")
+	for _, warning := range tz.Warnings(source, target) {
+		fmt.Fprintln(os.Stderr, "warning:", warning)
+	}
+	formatted := result.Format("2006-01-02 15:04:05 -0700 MST")
 	if optRootNoNewline {
 		fmt.Print(formatted)
 	} else {
@@ -87,9 +88,14 @@ func listZones() {
 		if def.Ambiguous != "" {
 			note = " [ambiguous; also: " + def.Ambiguous + "]"
 		}
+		if isDSTAwareAbbrev(abbrev) {
+			note += " [DST aware]"
+		}
 		fmt.Printf("%-6s UTC%s  %s%s\n", abbrev, DateTimeMate.FormatUTCOffset(def.Offset), def.Description, note)
 	}
 	fmt.Println()
+	fmt.Println("Abbreviations marked [DST aware] resolve as IANA zones and follow their DST")
+	fmt.Println("rules; the offset shown for them is their standard (winter) offset.")
 	fmt.Println("IANA zone names such as America/New_York or Asia/Kolkata are also supported")
 	fmt.Println("and preferred: unlike the fixed offsets above, they are DST aware.")
 	fmt.Println("List them with: dtmate tz --list-iana")
@@ -97,10 +103,27 @@ func listZones() {
 	fmt.Printf("variable, e.g. %s=\"IST=Asia/Jerusalem|CST=Asia/Shanghai\"\n", DateTimeMate.ZoneAliasesEnvVar)
 }
 
+// isDSTAwareAbbrev reports whether an abbreviation resolves as an IANA
+// zone whose UTC offset changes over the year (e.g. CET), meaning the
+// fixed offset shown in the abbreviation table only applies in winter;
+// conversions resolve IANA names before the abbreviation table, so such
+// entries are DST aware in practice
+func isDSTAwareAbbrev(abbrev string) bool {
+	loc, err := time.LoadLocation(abbrev)
+	if err != nil {
+		return false
+	}
+	year := time.Now().Year()
+	_, january := time.Date(year, time.January, 15, 12, 0, 0, 0, time.UTC).In(loc).Zone()
+	_, july := time.Date(year, time.July, 15, 12, 0, 0, 0, time.UTC).In(loc).Zone()
+	return january != july
+}
+
 // listIANAZones prints each IANA zone name with the UTC offset and
 // abbreviation currently in effect there
 func listIANAZones() {
 	now := time.Now()
+	fmt.Printf("offsets and abbreviations are those currently in effect (%s)\n", now.Format("2006-01-02"))
 	for _, name := range DateTimeMate.ListIANAZones() {
 		loc, err := time.LoadLocation(name)
 		if err != nil {

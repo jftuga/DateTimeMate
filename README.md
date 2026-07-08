@@ -64,11 +64,12 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 <summary>7. Convert a date/time from one time zone to another?</summary>
 
 `dtmate tz "2024-01-15 12:00:00 UTC" America/New_York`
-* answer: `2024-01-15 07:00:00 EST`
+* answer: `2024-01-15 07:00:00 -0500 EST`
 * zones can be given in multiple styles:
-* * IANA names such as `America/New_York`, `Asia/Kolkata`, `Australia/Eucla` *(preferred; these are DST aware)*
+* * IANA names such as `America/New_York`, `Asia/Kolkata`, `Australia/Eucla` *(preferred; these are DST aware and case-insensitive)*
 * * abbreviations such as `EST`, `JST`, `pst` *(case-insensitive, fixed offsets)*
 * * UTC offsets in seconds, such as `19800` for UTC+5:30
+* the source may also be a unix timestamp in seconds or milliseconds, such as `1700265600`
 * pin ambiguous abbreviations with an environment variable: `DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai"`
 * list all supported abbreviations: `dtmate tz --list-zones`
 * list all IANA zone names with their current offsets: `dtmate tz --list-iana`
@@ -511,40 +512,44 @@ $ DTMATE_DATE_ORDER=DMY dtmate fmt 01/02/2024 "%F"
 
 # convert using IANA zone names (preferred; these are DST aware)
 $ dtmate tz "2024-01-15 12:00:00 UTC" America/New_York
-2024-01-15 07:00:00 EST
+2024-01-15 07:00:00 -0500 EST
 
 # the same source in July automatically yields daylight time
 $ dtmate tz "2024-07-04 08:00:00 EDT" Europe/Paris
-2024-07-04 14:00:00 CEST
+2024-07-04 14:00:00 +0200 CEST
 
 # abbreviations work for both the source and the target
 $ dtmate tz "2024-01-15 09:00:00 PST" JST
-2024-01-16 02:00:00 JST
+2024-01-16 02:00:00 +0900 JST
 
-# abbreviations are case-insensitive
+# abbreviations and IANA names are case-insensitive
 $ dtmate tz "2024-01-15 12:00:00 UTC" jst
-2024-01-15 21:00:00 JST
+2024-01-15 21:00:00 +0900 JST
 
 # a zone-less source is interpreted as local time
 $ dtmate tz "2024-01-15 12:00:00" UTC
-2024-01-15 17:00:00 UTC
+2024-01-15 17:00:00 +0000 UTC
+
+# a unix timestamp in seconds or milliseconds also works as the source
+$ dtmate tz "1700265600" UTC
+2023-11-18 00:00:00 +0000 UTC
 
 # a UTC offset in seconds is also accepted (19800 = UTC+5:30)
 $ dtmate tz "2024-01-15 12:00:00 UTC" 19800
-2024-01-15 17:30:00 UTC+5
+2024-01-15 17:30:00 +0530 UTC+05:30
 
 # ambiguous abbreviations warn on stderr and use their primary meaning
 $ dtmate tz "2024-01-15 12:00:00 UTC" IST
 warning: IST is ambiguous: using India Standard Time (UTC+05:30), not Israel Standard Time (UTC+2), Irish Standard Time (UTC+1); set DTMATE_TZ_ALIASES="IST=<IANA zone>" to override
-2024-01-15 17:30:00 IST
+2024-01-15 17:30:00 +0530 IST
 
 # pin an ambiguous abbreviation to an IANA zone; aliases stay DST aware
 $ DTMATE_TZ_ALIASES="IST=Asia/Jerusalem" dtmate tz "2024-07-15 12:00:00 UTC" IST
-2024-07-15 15:00:00 IDT
+2024-07-15 15:00:00 +0300 IDT
 
 # multiple aliases are pipe-delimited
 $ DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai" dtmate tz "2024-01-15 12:00:00 UTC" CST
-2024-01-15 20:00:00 CST
+2024-01-15 20:00:00 +0800 CST
 
 # list the supported abbreviations
 $ dtmate tz --list-zones
@@ -555,6 +560,7 @@ ACWST  UTC+08:45  Australian Central Western Standard Time
 
 # list the IANA zone names with the offset currently in effect there
 $ dtmate tz --list-iana
+offsets and abbreviations are those currently in effect (2026-07-07)
 Africa/Abidjan                   UTC+00:00 (GMT)
 Africa/Accra                     UTC+00:00 (GMT)
 ...
@@ -571,7 +577,7 @@ Australia/Sydney                 UTC+10:00 (AEST)
 # date/times before 1970 are rejected by default because time zone
 # data is unreliable before then; use --force to convert anyway
 $ dtmate tz --force "1900-02-28 23:59:59 UTC" Europe/London
-1900-02-28 23:59:59 GMT
+1900-02-28 23:59:59 +0000 GMT
 ```
 </details>
 
