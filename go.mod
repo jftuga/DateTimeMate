@@ -4,7 +4,6 @@ go 1.23.3
 
 require (
 	github.com/golang-module/carbon/v2 v2.3.12
-	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/jftuga/parsetime v0.4.0
 	github.com/lestrrat-go/strftime v1.0.6
 	github.com/spf13/cobra v1.8.1
