@@ -6,7 +6,8 @@
 //
 // Portions of the layout table are derived from the layout list in
 // github.com/golang-module/carbon (MIT License, Copyright (c) gouguoyin),
-// curated as described in DEPENDENCY_REPLACEMENT.md.
+// curated down to the shapes this repo documents as supported; the
+// curation rationale is recorded in the comments on each table section.
 package dtparse
 
 import (
