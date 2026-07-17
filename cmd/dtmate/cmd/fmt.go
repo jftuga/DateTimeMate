@@ -53,6 +53,8 @@ func listConversionsSpecifiers() {
 		{`%d`, `day of the month as a decimal number (01-31)`},
 		{`%e`, `the day of the month as a decimal number (1-31); single digits are preceded by a blank`},
 		{`%F`, `equivalent to %Y-%m-%d`},
+		{`%G`, `the ISO 8601 week-based year with century as a decimal number`},
+		{`%g`, `the ISO 8601 week-based year without century as a decimal number (00-99)`},
 		{`%H`, `the hour (24-hour clock) as a decimal number (00-23)`},
 		{`%h`, `same as %b`},
 		{`%I`, `the hour (12-hour clock) as a decimal number (01-12)`},
@@ -81,6 +83,8 @@ func listConversionsSpecifiers() {
 		{`%y`, `the year without century as a decimal number (00-99)`},
 		{`%Z`, `the time zone name`},
 		{`%z`, `the time zone offset from UTC`},
+		{`%-`, `a '-' before a numeric specifier suppresses padding, e.g. %-d, %-H`},
+		{`%#`, `same as %-`},
 		{`%%`, `a '%'`},
 	}
 
