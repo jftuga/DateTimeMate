@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jftuga/DateTimeMate"
+	"io"
 	"os"
 	"strings"
 
@@ -32,7 +33,11 @@ var diffCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if optDiffReadFromStdin {
-			start, end := getInput()
+			start, end, err := getInput(os.Stdin)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 			outputDiff(start, end, optDiffBrief)
 			return
 		}
@@ -55,23 +60,43 @@ func init() {
 	diffCmd.Flags().BoolVarP(&optDiffAbsolute, "absolute", "A", false, "always output an absolute (positive) duration")
 }
 
-// either read one line containing a comma, then split start and end on this
-// or read two lines with start on line one and end on line two
-func getInput() (string, string) {
-	input := bufio.NewScanner(os.Stdin)
-	input.Scan()
-	line := input.Text()
-	if strings.Contains(line, ",") {
-		split := strings.Split(line, ",")
-		if len(split) != 2 {
-			fmt.Fprintf(os.Stderr, "invalid stdin input: %s\n", line)
-			os.Exit(1)
+// getInput reads the start and end date/times from r: either one line
+// containing "start,end" or start on line one and end on line two; a
+// non-empty second line takes precedence over a comma in the first line
+// so that dates containing commas (e.g. "Jan 2, 2024") work in two-line mode
+func getInput(r io.Reader) (string, string, error) {
+	const usage = "expected 'start,end' on one line or start and end on two lines"
+	input := bufio.NewScanner(r)
+	if !input.Scan() {
+		if err := input.Err(); err != nil {
+			return "", "", err
 		}
-		return split[0], split[1]
+		return "", "", errors.New("no input on stdin: " + usage)
 	}
-	input.Scan()
-	end := input.Text()
-	return line, end
+	line := strings.TrimSpace(input.Text())
+	var end string
+	if input.Scan() {
+		end = strings.TrimSpace(input.Text())
+	}
+	if err := input.Err(); err != nil {
+		return "", "", err
+	}
+	if end != "" {
+		if line == "" {
+			return "", "", errors.New("invalid stdin input: first line is empty")
+		}
+		return line, end, nil
+	}
+	split := strings.Split(line, ",")
+	if len(split) != 2 {
+		return "", "", fmt.Errorf("invalid stdin input %q: %s", line, usage)
+	}
+	start := strings.TrimSpace(split[0])
+	end = strings.TrimSpace(split[1])
+	if start == "" || end == "" {
+		return "", "", fmt.Errorf("invalid stdin input %q: %s", line, usage)
+	}
+	return start, end, nil
 }
 
 // convert duration from one group of units to another

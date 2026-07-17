@@ -16,7 +16,7 @@ var fmtCmd = &cobra.Command{
   dtmate fmt now %s`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if optFmtList {
-			return nil
+			return cobra.NoArgs(cmd, args)
 		}
 		if len(args) != 2 {
 			return errors.New("requires two arguments: [date/time] [format specifiers]")

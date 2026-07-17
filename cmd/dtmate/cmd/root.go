@@ -59,8 +59,9 @@ var rootCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
-		// if no arguments are provided and no flags are set, show help
-		if len(args) == 0 && !cmd.Flags().Changed("examples") && !cmd.Flags().Changed("help-all") {
+		// the flag values (not Changed) gate the branches above so that
+		// explicit --examples=false / --help-all=false still show help
+		if len(args) == 0 {
 			cmd.Help() //nolint:errcheck
 		}
 	},
@@ -96,7 +97,7 @@ func extractReadmeExamples(markdown string) string {
 	if len(matches) == 2 {
 		return matches[1]
 	}
-	return "[Internal Error] Unable to output examples. Check the extractShellCode() function."
+	return "[Internal Error] Unable to output examples. Check the extractReadmeExamples() function."
 }
 
 func ShowExamples() {
