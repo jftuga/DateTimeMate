@@ -22,7 +22,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.19.0"
+	ModVersion string = "1.20.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -64,9 +64,7 @@ var abbrevMap = [][]string{
 // into actual dates; yesterday and tomorrow are -/+ 24 hours of current time
 func ConvertRelativeDateToActual(from string) string {
 	switch strings.ToLower(from) {
-	case "now":
-		return time.Now().Format("2006-01-02 15:04:05")
-	case "today":
+	case "now", "today":
 		return time.Now().Format("2006-01-02 15:04:05")
 	case "yesterday":
 		// Add keeps the documented "exactly 24 hours" promise; AddDate
@@ -115,6 +113,14 @@ func sourceHasExplicitZone(source string, t time.Time) bool {
 	// an RFC3339 trailing "Z" (e.g. "2024-01-15T08:30:00Z") denotes UTC
 	// explicitly even though the zone name "UTC" never appears in the text
 	if offset == 0 && strings.HasSuffix(source, "Z") {
+		return true
+	}
+	// a whole-hour offset written as a bare ±HH suffix (the ISO8601 short
+	// form, e.g. "2024-01-02T15:04:05+05") is too short for
+	// zoneOffsetRegexp but is just as explicit; requiring the suffix to
+	// spell t's own offset keeps date digits such as the "-05" in
+	// "2024-01-05" from matching unless the parsed offset already agrees
+	if offset%3600 == 0 && strings.HasSuffix(source, fmt.Sprintf("%+03d", offset/3600)) {
 		return true
 	}
 	return zoneOffsetRegexp.MatchString(source)
@@ -206,7 +212,7 @@ var slashDateTimeSuffixes = []string{"", " 15:04:05", "T15:04:05", " 15:04", "T1
 // reports whether the input has the slash-date shape at all; when true the
 // caller must not try other parsers, so that no shape can silently fall
 // through to a parser with a different field order.
-func parseSlashDate(source string) (time.Time, bool, error) {
+func parseSlashDate(source string, loc *time.Location) (time.Time, bool, error) {
 	first, second, yearDigits, ok := slashDateFields(source)
 	if !ok {
 		return time.Time{}, false, nil
@@ -242,7 +248,7 @@ func parseSlashDate(source string) (time.Time, bool, error) {
 		dateLayout = "2/1/" + yearLayout
 	}
 	for _, suffix := range slashDateTimeSuffixes {
-		t, err := time.ParseInLocation(dateLayout+suffix, source, time.Local)
+		t, err := time.ParseInLocation(dateLayout+suffix, source, loc)
 		if err == nil {
 			return t, true, nil
 		}
@@ -283,17 +289,26 @@ func validateParsedZone(t time.Time) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("zone abbreviation %q is not resolvable in this input position", name)
 }
 
-// parseDateTime parses a date/time string in four layers: common zone-less
-// layouts in local time, then zone-carrying layouts (validated so a
-// fabricated zero-offset zone is repaired or rejected), then slash-separated
-// dates (whose field order is settled by DateOrderEnvVar and which claim
-// their shape exclusively), and finally the unified dtparse fallback table,
-// whose zoned results run the same zone validation as the second layer;
-// every layer rejects out-of-range components immediately so invalid input
-// can never fall through to a layer that would silently normalize it
+// parseDateTime parses a date/time string, interpreting zone-less input in
+// the local time zone
 func parseDateTime(source string) (time.Time, error) {
+	return parseDateTimeIn(source, time.Local)
+}
+
+// parseDateTimeIn parses a date/time string in four layers: common zone-less
+// layouts in loc, then zone-carrying layouts (validated so a fabricated
+// zero-offset zone is repaired or rejected), then slash-separated dates
+// (whose field order is settled by DateOrderEnvVar and which claim their
+// shape exclusively), and finally the unified dtparse fallback table, whose
+// zoned results run the same zone validation as the second layer; every
+// layer rejects out-of-range components immediately so invalid input can
+// never fall through to a layer that would silently normalize it. loc is
+// the zone for all zone-less input, including the date stamped onto a bare
+// time of day, so "08:30 CET" means 08:30 on the current CET day even when
+// the local calendar day differs.
+func parseDateTimeIn(source string, loc *time.Location) (time.Time, error) {
 	for _, layout := range wallClockLayouts {
-		t, err := time.ParseInLocation(layout, source, time.Local)
+		t, err := time.ParseInLocation(layout, source, loc)
 		if err == nil {
 			return t, nil
 		}
@@ -310,10 +325,10 @@ func parseDateTime(source string) (time.Time, error) {
 			return validateParsedZone(t)
 		}
 	}
-	if t, claimed, err := parseSlashDate(source); claimed {
+	if t, claimed, err := parseSlashDate(source, loc); claimed {
 		return t, err
 	}
-	t, kind, err := dtparse.Parse(source, time.Local)
+	t, kind, err := dtparse.Parse(source, loc)
 	if err != nil {
 		return time.Time{}, err
 	}
