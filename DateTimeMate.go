@@ -9,8 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-module/carbon/v2"
-	"github.com/jftuga/parsetime"
+	"github.com/jftuga/DateTimeMate/internal/dtparse"
 	"github.com/lestrrat-go/strftime"
 )
 
@@ -23,7 +22,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.16.0"
+	ModVersion string = "1.17.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -96,19 +95,6 @@ func removeTrailingS(s string) string {
 	return strings.TrimSuffix(s, "s")
 }
 
-// fixLocalZone corrects the offset of zone-less date/times: parsetime stamps
-// them with a fixed snapshot of today's zone (e.g. EDT on a January date), so
-// reinterpret the wall clock in time.Local, which resolves the DST offset in
-// effect on that date; times that carry any other explicit zone are untouched
-func fixLocalZone(t time.Time) time.Time {
-	name, offset := t.Zone()
-	nowName, nowOffset := time.Now().Zone()
-	if name == nowName && offset == nowOffset {
-		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Local)
-	}
-	return t
-}
-
 // zoneOffsetRegexp matches a numeric UTC offset written into a date/time
 // string, such as "+0500", "-04:30", or "-0400": a sign followed by two
 // digits, an optional colon, and two more digits; the separators inside
@@ -118,8 +104,9 @@ var zoneOffsetRegexp = regexp.MustCompile(`[+-][0-9]{2}:?[0-9]{2}`)
 
 // sourceHasExplicitZone reports whether the source text itself names the
 // zone found on the parsed time, either by abbreviation (e.g. "EDT") or as
-// a numeric UTC offset; fixLocalZone must leave such times alone because
-// their zone was written by the user, not stamped on by parsetime
+// a numeric UTC offset; parseWallClockIn uses it to decide whether a wall
+// clock carried its own zone that must be reconciled with a trailing zone
+// token, instead of being re-stamped into that zone
 func sourceHasExplicitZone(source string, t time.Time) bool {
 	name, offset := t.Zone()
 	if name != "" && strings.Contains(source, name) {
@@ -133,11 +120,10 @@ func sourceHasExplicitZone(source string, t time.Time) bool {
 	return zoneOffsetRegexp.MatchString(source)
 }
 
-// wallClockLayouts are zone-less layouts interpreted in the local time
-// zone; they are tried before parsetime because parsetime silently
-// corrupts pre-1970 date/times; the 14-digit compact layout is included
-// so it parses deterministically instead of relying on parsetime, whose
-// year-mismatch guard cannot see a year inside a 14-digit run
+// wallClockLayouts are the most common zone-less layouts, interpreted in
+// the local time zone and tried before every other layer; the 14-digit
+// compact layout is included so it parses deterministically as a date/time
+// rather than reaching a layer that could misread the digit run
 var wallClockLayouts = []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02", "20060102150405"}
 
 // zonedLayouts carry their own zone or offset, which must be preserved in
@@ -275,12 +261,35 @@ func outOfRangeParseError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "out of range")
 }
 
-// parseDateTime parses a date/time string: standard layouts are tried
-// first because they preserve explicit zones and handle any year, then
-// slash-separated dates (whose field order is settled by DateOrderEnvVar),
-// then parsetime (with fixLocalZone correcting the DST offset of zone-less
-// strings), and finally carbon; parsetime results naming a year that does
-// not appear in the input are rejected as corrupt rather than returned
+// validateParsedZone checks the zone of a successfully parsed zone-carrying
+// date/time: time.Parse fabricates a zero-offset zone for any abbreviation
+// it cannot resolve, so a zero offset under a name outside
+// zeroOffsetZoneNames is either repaired (±NN tokens such as "+08" carry
+// their real offset in the digits, so the wall clock is re-stamped into the
+// zone they actually name) or rejected; both the zonedLayouts layer and the
+// dtparse fallback layer run this same validation so they cannot drift apart
+func validateParsedZone(t time.Time) (time.Time, error) {
+	name, offset := t.Zone()
+	if offset != 0 || zeroOffsetZoneNames[strings.ToUpper(name)] {
+		return t, nil
+	}
+	if loc, shaped, serr := parseOffsetSuffix(name); shaped {
+		if serr != nil {
+			return time.Time{}, serr
+		}
+		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
+	}
+	return time.Time{}, fmt.Errorf("zone abbreviation %q is not resolvable in this input position", name)
+}
+
+// parseDateTime parses a date/time string in four layers: common zone-less
+// layouts in local time, then zone-carrying layouts (validated so a
+// fabricated zero-offset zone is repaired or rejected), then slash-separated
+// dates (whose field order is settled by DateOrderEnvVar and which claim
+// their shape exclusively), and finally the unified dtparse fallback table,
+// whose zoned results run the same zone validation as the second layer;
+// every layer rejects out-of-range components immediately so invalid input
+// can never fall through to a layer that would silently normalize it
 func parseDateTime(source string) (time.Time, error) {
 	for _, layout := range wallClockLayouts {
 		t, err := time.ParseInLocation(layout, source, time.Local)
@@ -297,71 +306,20 @@ func parseDateTime(source string) (time.Time, error) {
 			return time.Time{}, fmt.Errorf("invalid date/time %q: %v", source, err)
 		}
 		if err == nil {
-			name, offset := t.Zone()
-			if offset != 0 || zeroOffsetZoneNames[strings.ToUpper(name)] {
-				return t, nil
-			}
-			// time.Parse fabricates a zero offset for any zone token it
-			// cannot resolve; ±NN tokens (e.g. "+08") carry their real
-			// offset in the digits, so re-stamp the wall clock into the
-			// zone they actually name instead of keeping the wrong instant
-			if loc, shaped, serr := parseOffsetSuffix(name); shaped {
-				if serr != nil {
-					return time.Time{}, serr
-				}
-				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
-			}
-			return time.Time{}, fmt.Errorf("zone abbreviation %q is not resolvable in this input position", name)
+			return validateParsedZone(t)
 		}
 	}
 	if t, claimed, err := parseSlashDate(source); claimed {
 		return t, err
 	}
-	p, err := parsetime.NewParseTime()
+	t, kind, err := dtparse.Parse(source, time.Local)
 	if err != nil {
 		return time.Time{}, err
 	}
-	t, err := p.Parse(source)
-	if err == nil && !parsedYearMismatch(source, t) {
-		if sourceHasExplicitZone(source, t) {
-			return t, nil
-		}
-		return fixLocalZone(t), nil
+	if kind == dtparse.KindZoned {
+		return validateParsedZone(t)
 	}
-	if c := carbon.Parse(source); c.Error == nil {
-		return c.StdTime(), nil
-	}
-	if err == nil {
-		return time.Time{}, fmt.Errorf("refusing unreliable parse of %q: result year %d does not appear in the input", source, t.Year())
-	}
-	return time.Time{}, err
-}
-
-// parsedYearMismatch reports whether the input names a year (a standalone
-// 4-digit run between 1000 and 2999, not preceded by a '.' as fractional
-// seconds would be) that the parsed result does not match; parsetime
-// signals corruption this way instead of returning an error
-func parsedYearMismatch(source string, t time.Time) bool {
-	sawYear := false
-	digits := 0
-	for i := 0; i <= len(source); i++ {
-		if i < len(source) && source[i] >= '0' && source[i] <= '9' {
-			digits++
-			continue
-		}
-		if digits == 4 {
-			start := i - digits
-			year, _ := strconv.Atoi(source[start:i])
-			if year >= 1000 && year <= 2999 && (start == 0 || source[start-1] != '.') {
-				if year == t.Year() {
-					return false
-				}
-				sawYear = true
-			}
-		}
-		digits = 0
-	}
-	return sawYear
+	return t, nil
 }
 
 // Reformat converts a date/time string into a specified format. The source can be:

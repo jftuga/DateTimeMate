@@ -124,7 +124,7 @@ func outputDiff(start, end string, brief bool) {
 	}
 	if optDiffConv != "" {
 		// convert from the exact duration, not the human-readable string:
-		// the formatted string truncates sub-unit remainders and durafmt
+		// the formatted string truncates sub-unit remainders and humandur
 		// uses 365-day years while conv uses 365.25
 		result = convDuration(fmt.Sprintf("%d nanoseconds", duration.Nanoseconds()), optDiffConv, optDiffBrief, optDiffDecimals)
 	}

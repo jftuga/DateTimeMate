@@ -50,8 +50,8 @@ func TestDiffSignedResult(t *testing.T) {
 
 func TestDiffSubMicrosecond(t *testing.T) {
 	t.Parallel()
-	// durafmt drops sub-microsecond remainders, so they are appended as
-	// nanoseconds; a sub-microsecond diff used to render as an empty string
+	// nanoseconds are a first-class unit; under the retired durafmt
+	// dependency a sub-microsecond diff used to render as an empty string
 	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000005Z", false, "500 nanoseconds")
 	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000015Z", false, "1 microsecond 500 nanoseconds")
 	testDiffStartEnd(t, "2024-06-07T08:00:00Z", "2024-06-07T08:00:00.0000015Z", true, "1us500ns")
