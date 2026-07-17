@@ -2,7 +2,7 @@ package DateTimeMate
 
 import (
 	"fmt"
-	"github.com/golang-module/carbon/v2"
+	"github.com/jftuga/DateTimeMate/internal/datecalc"
 	"github.com/lestrrat-go/strftime"
 	"math"
 	"regexp"
@@ -41,20 +41,8 @@ const (
 	maxUntilIterations = 1_000_000
 )
 
-var carbonFuncs = map[string]interface{}{
-	"year":        [2]interface{}{carbon.Carbon.AddYears, carbon.Carbon.SubYears},
-	"week":        [2]interface{}{carbon.Carbon.AddWeeks, carbon.Carbon.SubWeeks},
-	"day":         [2]interface{}{carbon.Carbon.AddDays, carbon.Carbon.SubDays},
-	"hour":        [2]interface{}{carbon.Carbon.AddHours, carbon.Carbon.SubHours},
-	"minute":      [2]interface{}{carbon.Carbon.AddMinutes, carbon.Carbon.SubMinutes},
-	"second":      [2]interface{}{carbon.Carbon.AddSeconds, carbon.Carbon.SubSeconds},
-	"millisecond": [2]interface{}{carbon.Carbon.AddMilliseconds, carbon.Carbon.SubMilliseconds},
-	"microsecond": [2]interface{}{carbon.Carbon.AddMicroseconds, carbon.Carbon.SubMicroseconds},
-	"nanosecond":  [2]interface{}{carbon.Carbon.AddNanoseconds, carbon.Carbon.SubNanoseconds},
-}
-
 // unitNanoseconds is used to apply the fractional part of an amount, so the
-// calendar-aware carbon functions still handle the integer part
+// calendar-aware datecalc functions still handle the integer part
 var unitNanoseconds = map[string]float64{
 	"year":        365.25 * 24 * float64(time.Hour),
 	"week":        7 * 24 * float64(time.Hour),
@@ -132,20 +120,16 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 		return nil, fmt.Errorf("repeat & until are mutually exclusive")
 	}
 
-	f, err := parseDateTimeOrUnix(dur.From)
+	from, err := parseDateTimeOrUnix(dur.From)
 	if err != nil {
 		return nil, err
-	}
-	from := carbon.CreateFromStdTime(f)
-	if from.Error != nil {
-		return nil, from.Error
 	}
 	periodMatches, err := parsePeriod(dur.Period)
 	if err != nil {
 		return nil, err
 	}
 
-	var all []carbon.Carbon
+	var all []time.Time
 	switch {
 	case dur.Repeat == 0 && dur.Until == "":
 		to, err := applyPeriod(from, periodMatches, op)
@@ -169,10 +153,10 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 		}
 		// the until date/time must lie in the direction of travel, otherwise
 		// the loop would exit immediately with an empty result and no error
-		if opAdd == op && !u.After(f) {
+		if opAdd == op && !u.After(from) {
 			return nil, fmt.Errorf("until date/time %q is not after from %q", dur.Until, dur.From)
 		}
-		if opSub == op && !u.Before(f) {
+		if opSub == op && !u.Before(from) {
 			return nil, fmt.Errorf("until date/time %q is not before from %q", dur.Until, dur.From)
 		}
 		to := from
@@ -184,16 +168,16 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			if next.StdTime().Equal(to.StdTime()) {
+			if next.Equal(to) {
 				return nil, fmt.Errorf("duration %q does not advance toward the until date/time", dur.Period)
 			}
 			to = next
 			if opAdd == op {
-				if to.StdTime().After(u) {
+				if to.After(u) {
 					break
 				}
 			} else {
-				if to.StdTime().Before(u) {
+				if to.Before(u) {
 					break
 				}
 			}
@@ -205,11 +189,11 @@ func (dur *Dur) addOrSub(op int) ([]string, error) {
 
 // renderResults converts computed date/times to strings, applying the
 // optional strftime output format which also supports the unix time %s modifier
-func (dur *Dur) renderResults(all []carbon.Carbon) ([]string, error) {
+func (dur *Dur) renderResults(all []time.Time) ([]string, error) {
 	rendered := make([]string, 0, len(all))
 	if len(dur.OutputFormat) == 0 {
-		for _, c := range all {
-			rendered = append(rendered, c.ToString())
+		for _, t := range all {
+			rendered = append(rendered, t.String())
 		}
 		return rendered, nil
 	}
@@ -217,8 +201,8 @@ func (dur *Dur) renderResults(all []carbon.Carbon) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, c := range all {
-		rendered = append(rendered, f.FormatString(c.StdTime()))
+	for _, t := range all {
+		rendered = append(rendered, f.FormatString(t))
 	}
 	return rendered, nil
 }
@@ -261,10 +245,14 @@ func parsePeriod(period string) ([][2]string, error) {
 }
 
 // applyPeriod applies each (amount, unit) pair of a parsed period to a date/time
-// when index==0, then add; when index==1, then subtract
-// the integer part of an amount uses carbon's calendar-aware functions; any
+// when op==opAdd, then add; when op==opSub, then subtract
+// the integer part of an amount uses datecalc's calendar-aware functions; any
 // fractional part is applied as nanoseconds
-func applyPeriod(to carbon.Carbon, periodMatches [][2]string, index int) (carbon.Carbon, error) {
+func applyPeriod(to time.Time, periodMatches [][2]string, op int) (time.Time, error) {
+	sign := +1
+	if op == opSub {
+		sign = -1
+	}
 	for _, match := range periodMatches {
 		amount, word := match[0], normalizeUnit(match[1])
 		value, err := strconv.ParseFloat(amount, 64)
@@ -275,13 +263,16 @@ func applyPeriod(to carbon.Carbon, periodMatches [][2]string, index int) (carbon
 			return to, fmt.Errorf("amount too large: %s", amount)
 		}
 		whole, frac := math.Modf(value)
-		to = carbonFuncs[word].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, int(whole))
+		to, err = datecalc.Apply(to, word, int(whole), sign)
+		if err != nil {
+			return to, err
+		}
 		if frac > 0 {
 			ns := int(math.Round(frac * unitNanoseconds[word]))
-			to = carbonFuncs["nanosecond"].([2]interface{})[index].(func(carbon.Carbon, int) carbon.Carbon)(to, ns)
-		}
-		if to.Error != nil {
-			return to, to.Error
+			to, err = datecalc.Apply(to, "nanosecond", ns, sign)
+			if err != nil {
+				return to, err
+			}
 		}
 	}
 	return to, nil

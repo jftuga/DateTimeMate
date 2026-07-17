@@ -66,16 +66,16 @@ var abbrevMap = [][]string{
 func ConvertRelativeDateToActual(from string) string {
 	switch strings.ToLower(from) {
 	case "now":
-		return carbon.Now().String()
+		return time.Now().Format("2006-01-02 15:04:05")
 	case "today":
-		return carbon.Now().String()
+		return time.Now().Format("2006-01-02 15:04:05")
 	case "yesterday":
-		// SubHours keeps the documented "exactly 24 hours" promise; SubDay
+		// Add keeps the documented "exactly 24 hours" promise; AddDate
 		// is calendar-day arithmetic, which is 23 or 25 real hours on the
 		// two DST transition days
-		return carbon.Now().SubHours(24).String()
+		return time.Now().Add(-24 * time.Hour).Format("2006-01-02 15:04:05")
 	case "tomorrow":
-		return carbon.Now().AddHours(24).String()
+		return time.Now().Add(24 * time.Hour).Format("2006-01-02 15:04:05")
 	}
 	return from
 }

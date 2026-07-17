@@ -1,7 +1,6 @@
 package DateTimeMate
 
 import (
-	"github.com/golang-module/carbon/v2"
 	"strings"
 	"testing"
 	"time"
@@ -471,8 +470,9 @@ func TestDurPre1970Until(t *testing.T) {
 
 func TestDurRelativeUntil(t *testing.T) {
 	t.Parallel()
-	start := carbon.Now().StartOfDay()
-	from := start.ToDateTimeString()
+	now := time.Now()
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	from := start.Format("2006-01-02 15:04:05")
 	dur := NewDur(
 		DurWithFrom(from),
 		DurWithDur("7h59m1s"),
@@ -489,7 +489,7 @@ func TestDurRelativeUntil(t *testing.T) {
 	}
 	period := 7*time.Hour + 59*time.Minute + 1*time.Second
 	for i := range len(future) {
-		correct := start.StdTime().Add(time.Duration(i+1) * period).Format("2006-01-02 15:04:05")
+		correct := start.Add(time.Duration(i+1) * period).Format("2006-01-02 15:04:05")
 		if !strings.Contains(future[i], correct) {
 			t.Errorf("[from: %v] [computed: %v] does not contain: [correct: %v]", from, future[i], correct)
 		}
