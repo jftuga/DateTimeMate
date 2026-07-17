@@ -20,3 +20,6 @@
 # Go workspace file
 go.work
 go.work.sum
+
+# PR description scratch file; never committed by convention
+PR.md
