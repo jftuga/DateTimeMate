@@ -242,6 +242,11 @@ Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
 * * Set `DTMATE_DATE_ORDER=DMY` for day/month/year, or `MDY` to silence the
     ambiguity warning; a field greater than 12 (such as `25/12/2024`)
     disambiguates on its own.
+* * Two-digit years such as `1/2/24` follow the same order rules; years
+    69-99 are 19xx and 00-68 are 20xx.
+* **Out-of-range date/times** such as `2024-02-30` or `08:61:00` are
+  rejected instead of being silently normalized, and empty input is
+  rejected instead of being read as the current time.
 * **Pure integers** parse by digit count: 10 digits are Unix seconds, 13 are
   Unix milliseconds, while 4, 8, and 14 digits are a year (`2024`), a compact
   date (`20240101`), and a compact date/time (`20240101080102`); 11, 12, and
@@ -253,6 +258,12 @@ Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
 * **Duration amounts** must be plain decimals (`90`, `1.5`, and mid-string
   negatives such as `1 year -30 days` in `conv`); `NaN`, `Inf`, exponent
   (`1e2`), and hex (`0x1p4`) forms are rejected.
+* **Long-form unit names** are case-insensitive (`1 Hour` equals `1 hour`);
+  brief units stay case-sensitive because `D` means days while `m` means
+  minutes.
+* **Zone abbreviations** such as `CET` or `EST` always mean their fixed UTC
+  offsets, on any date; use an IANA name such as `Europe/Paris` (or a
+  `DTMATE_TZ_ALIASES` alias) for DST-aware conversion.
 * **Duration range and precision**: durations are computed in integer
   nanoseconds, so integral amounts are exact; fractional amounts carry
   float64 precision (about 15-16 significant digits); totals are limited to
