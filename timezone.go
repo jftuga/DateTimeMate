@@ -285,8 +285,12 @@ func isZoneName(s string) bool {
 }
 
 // resolveLocation resolves a time zone given as an aliased abbreviation,
-// an IANA name (DST aware, case-insensitive), an abbreviation from
-// ZoneAbbrevs, or a UTC offset in seconds
+// an abbreviation from ZoneAbbrevs (a fixed offset), an IANA name
+// (DST aware, case-insensitive), or a UTC offset in seconds; abbreviations
+// are checked before IANA names because CET, EET, and WET are also IANA
+// legacy zones with DST rules, which would silently turn "08:30 CET" on a
+// summer date into 08:30 CEST; every other colliding name (EST, MST, HST,
+// GMT, UTC) is a fixed IANA zone with the same offset as the table entry
 func (c *TimeZoneConverter) resolveLocation(zone string) (*time.Location, error) {
 	upper := strings.ToUpper(zone)
 	if target, ok := c.Aliases[upper]; ok {
@@ -296,11 +300,11 @@ func (c *TimeZoneConverter) resolveLocation(zone string) (*time.Location, error)
 		}
 		return loc, nil
 	}
-	if loc, err := loadIANALocation(zone); err == nil {
-		return loc, nil
-	}
 	if def, ok := c.ZoneAbbrevs[upper]; ok {
 		return time.FixedZone(upper, def.Offset), nil
+	}
+	if loc, err := loadIANALocation(zone); err == nil {
+		return loc, nil
 	}
 	offset, err := parseOffset(zone)
 	if err == nil {

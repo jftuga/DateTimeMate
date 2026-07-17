@@ -30,8 +30,10 @@ type OptionsDur func(*Dur)
 const (
 	// a period is a series of amount/unit pairs; the amount must start at the
 	// beginning of the string or after whitespace so that a fractional amount
-	// such as "1.5" can never be partially matched as "5"
-	expanded string = `(?:^|\s)(\d+(?:\.\d+)?)\s(years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?)`
+	// such as "1.5" can never be partially matched as "5"; long-form unit
+	// names are case-insensitive, matching conv and durmath (brief units stay
+	// case-sensitive because "D" means days while "m" means minutes)
+	expanded string = `(?:^|\s)(\d+(?:\.\d+)?)\s((?i:years?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?|microseconds?|nanoseconds?))`
 	hintMsg  string = "Hint: duplicate durations not allowed; dates in uppercase; times in lowercase"
 
 	// maxUntilIterations is a backstop against unbounded output from the
@@ -264,7 +266,7 @@ func parsePeriod(period string) ([][2]string, error) {
 // fractional part is applied as nanoseconds
 func applyPeriod(to carbon.Carbon, periodMatches [][2]string, index int) (carbon.Carbon, error) {
 	for _, match := range periodMatches {
-		amount, word := match[0], removeTrailingS(match[1])
+		amount, word := match[0], normalizeUnit(match[1])
 		value, err := strconv.ParseFloat(amount, 64)
 		if err != nil {
 			return to, err
