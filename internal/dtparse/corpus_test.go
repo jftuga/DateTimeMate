@@ -169,4 +169,7 @@ func TestCorpusGolden(t *testing.T) {
 			t.Errorf("Parse(%q) = %q, golden pins %q", source, got, expected)
 		}
 	}
+	if t.Failed() {
+		t.Log("after an intentional table change, regenerate with: go test ./internal/dtparse -run TestCorpusGolden -update")
+	}
 }
