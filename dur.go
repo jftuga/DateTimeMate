@@ -41,20 +41,6 @@ const (
 	maxUntilIterations = 1_000_000
 )
 
-// unitNanoseconds is used to apply the fractional part of an amount, so the
-// calendar-aware datecalc functions still handle the integer part
-var unitNanoseconds = map[string]float64{
-	"year":        365.25 * 24 * float64(time.Hour),
-	"week":        7 * 24 * float64(time.Hour),
-	"day":         24 * float64(time.Hour),
-	"hour":        float64(time.Hour),
-	"minute":      float64(time.Minute),
-	"second":      float64(time.Second),
-	"millisecond": float64(time.Millisecond),
-	"microsecond": float64(time.Microsecond),
-	"nanosecond":  1,
-}
-
 var expandedRegexp = regexp.MustCompile(expanded)
 
 func NewDur(options ...OptionsDur) *Dur {
@@ -268,7 +254,10 @@ func applyPeriod(to time.Time, periodMatches [][2]string, op int) (time.Time, er
 			return to, err
 		}
 		if frac > 0 {
-			ns := int(math.Round(frac * unitNanoseconds[word]))
+			// the fractional part of an amount is applied as nanoseconds
+			// (unitNanos in conv.go defines a year as 365.25 days), so the
+			// calendar-aware datecalc functions still handle the integer part
+			ns := int(math.Round(frac * float64(unitNanos[word])))
 			to, err = datecalc.Apply(to, "nanosecond", ns, sign)
 			if err != nil {
 				return to, err
@@ -329,11 +318,14 @@ func expandPeriod(period string) (string, error) {
 		return "", fmt.Errorf("[expandPeriod] Invalid period: %s. %s", period, hintMsg)
 	}
 
-	// check that every other element is a number
+	// check that every other element is a number; quote the caller's
+	// original period in the error, never the internal expansion, whose
+	// placeholder replacements mangle unrecognized text ("1 month" used to
+	// error with `parsing "ont"`)
 	for i := 0; i < len(words); i += 2 {
 		_, err := strconv.ParseFloat(words[i], 64)
 		if err != nil {
-			return "", fmt.Errorf("[expandPeriod] %v. %s", err, hintMsg)
+			return "", fmt.Errorf("[expandPeriod] Invalid period: %s. %s", period, hintMsg)
 		}
 	}
 	return p, nil

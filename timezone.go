@@ -200,9 +200,10 @@ func (c *TimeZoneConverter) parseSourceTime(input string) (time.Time, error) {
 }
 
 // parseWallClockIn interprets the wall clock preceding a trailing zone
-// token in that zone; relative words and unix timestamps are rejected
-// because they already denote an instant, and a wall clock carrying its
-// own explicit zone or offset must agree with the trailing zone
+// token in that zone (including the date stamped onto a bare time of day);
+// relative words and unix timestamps are rejected because they already
+// denote an instant, and a wall clock carrying its own explicit zone or
+// offset must agree with the trailing zone
 func (c *TimeZoneConverter) parseWallClockIn(input, wall, zone string, loc *time.Location) (time.Time, error) {
 	if ConvertRelativeDateToActual(wall) != wall {
 		return time.Time{}, fmt.Errorf("relative date/times cannot carry a time zone: %q", input)
@@ -213,19 +214,14 @@ func (c *TimeZoneConverter) parseWallClockIn(input, wall, zone string, loc *time
 		}
 		return parseIntegerDateTime(wall, loc)
 	}
-	for _, layout := range wallClockLayouts {
-		if t, err := time.ParseInLocation(layout, wall, loc); err == nil {
-			return t, nil
-		}
-	}
-	t, err := parseDateTime(wall)
+	t, err := parseDateTimeIn(wall, loc)
 	if err != nil {
 		return time.Time{}, err
 	}
 	if sourceHasExplicitZone(wall, t) {
 		return reconcileZones(t, zone, loc)
 	}
-	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc), nil
+	return t, nil
 }
 
 // reconcileZones handles a wall clock that carried its own zone or offset

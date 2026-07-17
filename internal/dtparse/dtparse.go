@@ -38,103 +38,121 @@ type layoutEntry struct {
 	kind   Kind
 }
 
+// timeOfDaySuffixes are the time-of-day forms accepted after every entry in
+// dateBases, ordered longest first so an out-of-range component is reported
+// against the most specific shape; am/pm needs four spellings per shape
+// because Go's "PM" element matches only uppercase and "pm" only lowercase,
+// and the meridiem is accepted both joined to the time and separated by a
+// space (the same coverage slashDateTimeSuffixes provides in the root
+// package); the empty suffix accepts the bare date. Single-digit layout
+// elements accept both padded and unpadded input, so "8:30" and "08:30"
+// both match.
+var timeOfDaySuffixes = []string{
+	" 15:4:5", " 15:4",
+	" 3:4:5PM", " 3:4:5pm", " 3:4:5 PM", " 3:4:5 pm",
+	" 3:4PM", " 3:4pm", " 3:4 PM", " 3:4 pm",
+	"",
+}
+
+// dateBases are the zone-less date shapes, each combined with every entry
+// of timeOfDaySuffixes: the dashed, dotted, and 4-digit-year slashed
+// separators from carbon's list ("1/2/2006" forms are deliberately absent:
+// the root slash-date layer claims every d{1,2}/d{1,2}/d{2,4} shape first,
+// which keeps DTMATE_DATE_ORDER authoritative), then the month-name shapes;
+// "January" and "Jan" need separate bases because the short element
+// consumes only the first three letters of a full month name and then
+// fails on the remainder; "2-Jan-2006" is the shape strftime's %v renders
+var dateBases = []string{
+	"2006-1-2",
+	"2006.1.2",
+	"2006/1/2",
+	"January 2, 2006",
+	"Jan 2, 2006",
+	"Mon, Jan 2, 2006",
+	"2-Jan-2006",
+}
+
 // layouts is tried in order and the first success wins, so the order is part
-// of the spec. Within each family, longer layouts come before their prefixes
-// (e.g. "2006-1-2 15:4:5" before "2006-1-2") so a full match is never
-// shadowed by a partial one; zone-less ANSIC precedes the zoned variant so a
-// trailing year is never mistaken for a zone token; bare times come last
-// because no date layout can match a leading 1-2 digit hour. Go's time.Parse
-// accepts a fractional second after any seconds element even when the layout
-// has none, so no ".999999999" variants are needed.
-var layouts = []layoutEntry{
-	// flexible zone-less dates and date/times: single-digit layout elements
-	// accept both padded and unpadded input, covering "2024-1-2 8:30:45",
-	// "2024-01" (year-month), and the dotted and 4-digit-year slashed
-	// separators from carbon's list ("1/2/2006" forms are deliberately
-	// absent: the root slash-date layer claims every d{1,2}/d{1,2}/d{2,4}
-	// shape first, which keeps DTMATE_DATE_ORDER authoritative)
-	{"2006-1-2T15:4:5", KindWallClock},
-	{"2006-1-2T15:4", KindWallClock},
-	{"2006-1-2 15:4:5", KindWallClock},
-	{"2006-1-2 15:4", KindWallClock},
-	{"2006-1-2", KindWallClock},
-	{"2006-1", KindWallClock},
-	{"2006.1.2 15:4:5", KindWallClock},
-	{"2006.1.2 15:4", KindWallClock},
-	{"2006.1.2", KindWallClock},
-	{"2006.1", KindWallClock},
-	{"2006/1/2 15:4:5", KindWallClock},
-	{"2006/1/2 15:4", KindWallClock},
-	{"2006/1/2", KindWallClock},
-	{"2006/1", KindWallClock},
-	// month-name dates; "January" and "Jan" need separate layouts because
-	// the short element consumes only the first three letters of a full
-	// month name and then fails on the remainder
-	{"January 2, 2006 15:04:05", KindWallClock},
-	{"January 2, 2006 15:04", KindWallClock},
-	{"January 2, 2006 3:04:05 PM", KindWallClock},
-	{"January 2, 2006 3:04:05 pm", KindWallClock},
-	{"January 2, 2006 3:04 PM", KindWallClock},
-	{"January 2, 2006 3:04 pm", KindWallClock},
-	{"January 2, 2006", KindWallClock},
-	{"Jan 2, 2006 15:04:05", KindWallClock},
-	{"Jan 2, 2006 15:04", KindWallClock},
-	{"Jan 2, 2006 3:04:05 PM", KindWallClock},
-	{"Jan 2, 2006 3:04:05 pm", KindWallClock},
-	{"Jan 2, 2006 3:04 PM", KindWallClock},
-	{"Jan 2, 2006 3:04 pm", KindWallClock},
-	{"Jan 2, 2006", KindWallClock},
-	{"Mon, Jan 2, 2006 3:04 PM", KindWallClock},
-	// day-first month-name dates; strftime's %v renders this shape
-	{"2-Jan-2006 15:04:05", KindWallClock},
-	{"2-Jan-2006 15:04", KindWallClock},
-	{"2-Jan-2006", KindWallClock},
-	// ANSIC with and without weekday, zone-less first
-	{"Mon Jan _2 15:04:05 2006", KindWallClock},
-	{"Jan 2 15:04:05 2006", KindWallClock},
-	// ANSIC-style with zone and trailing year, without weekday: this is the
-	// one month-name zoned shape zonedLayouts does not cover and is pinned
-	// by TestExplicitZonePreservedAcrossDST
-	{"Jan 2 15:04:05 MST 2006", KindZoned},
-	// ISO date/times whose offset form RFC3339 rejects: no colon, or
-	// whole hours only ("+08")
-	{"2006-01-02T15:04:05-0700", KindZoned},
-	{"2006-01-02T15:04:05Z07", KindZoned},
-	// the tz CLI output format ("2006-01-02 15:04:05 -0700 MST") renders a
-	// zone whose abbreviation is numeric (e.g. Asia/Kathmandu's "+0545") as
-	// "+0545 +0545", which Go's "MST" element cannot re-parse; a second
-	// offset element reads the same value, so the CLI's own output
-	// round-trips (pinned by TestTimezoneOutputFormatRoundTrip)
-	{"2006-01-02 15:04:05 -0700 -0700", KindZoned},
-	// RFC822, RFC822Z, RFC850, Cookie, RFC1036
-	{"02 Jan 06 15:04 MST", KindZoned},
-	{"02 Jan 06 15:04 -0700", KindZoned},
-	{"Monday, 02-Jan-06 15:04:05 MST", KindZoned},
-	{"Monday, 02-Jan-2006 15:04:05 MST", KindZoned},
-	{"Mon, 02 Jan 06 15:04:05 -0700", KindZoned},
-	// bare times of day, stamped with today's date after parsing; Go's "PM"
-	// element matches only uppercase and "pm" only lowercase, so both
-	// spellings need a layout (same reason slashDateTimeSuffixes in the
-	// root package carries both), and am/pm is accepted both joined to the
-	// time and separated by a space
-	{"15:04:05", KindTimeOnly},
-	{"15:04", KindTimeOnly},
-	{"3:04:05PM", KindTimeOnly},
-	{"3:04PM", KindTimeOnly},
-	{"3:04:05pm", KindTimeOnly},
-	{"3:04pm", KindTimeOnly},
-	{"3:04:05 PM", KindTimeOnly},
-	{"3:04 PM", KindTimeOnly},
-	{"3:04:05 pm", KindTimeOnly},
-	{"3:04 pm", KindTimeOnly},
+// of the spec: within each family, longer layouts come before their prefixes
+// (e.g. "2006-1-2 15:4:5" before "2006-1-2") so an out-of-range component is
+// rejected against the most specific shape; zone-less ANSIC precedes the
+// zoned variant so a trailing year is never mistaken for a zone token; bare
+// times come last because no date layout can match a leading 1-2 digit hour.
+// Go's time.Parse accepts a fractional second after any seconds element even
+// when the layout has none, so no ".999999999" variants are needed.
+var layouts = buildLayouts()
+
+// buildLayouts assembles the ordered layout table from dateBases and
+// timeOfDaySuffixes plus the standalone year-month, ANSIC, zoned, and
+// bare-time entries
+func buildLayouts() []layoutEntry {
+	var table []layoutEntry
+	// dashed date/times with the "T" separator
+	table = append(table,
+		layoutEntry{"2006-1-2T15:4:5", KindWallClock},
+		layoutEntry{"2006-1-2T15:4", KindWallClock})
+	// every date base with every time-of-day suffix, e.g. "2024-1-2 8:30:45",
+	// "Jan 2, 2024 3:04PM", "Mon, Jan 2, 2024 15:04"
+	for _, base := range dateBases {
+		for _, suffix := range timeOfDaySuffixes {
+			table = append(table, layoutEntry{base + suffix, KindWallClock})
+		}
+	}
+	// year-month shapes, e.g. "2024-01"
+	table = append(table,
+		layoutEntry{"2006-1", KindWallClock},
+		layoutEntry{"2006.1", KindWallClock},
+		layoutEntry{"2006/1", KindWallClock})
+	table = append(table,
+		// ANSIC with and without weekday, zone-less first
+		layoutEntry{"Mon Jan _2 15:04:05 2006", KindWallClock},
+		layoutEntry{"Jan 2 15:04:05 2006", KindWallClock},
+		// ANSIC-style with zone and trailing year, without weekday: this is
+		// the one month-name zoned shape zonedLayouts does not cover and is
+		// pinned by TestExplicitZonePreservedAcrossDST
+		layoutEntry{"Jan 2 15:04:05 MST 2006", KindZoned},
+		// ISO date/times whose offset form RFC3339 rejects: no colon, or
+		// whole hours only ("+08")
+		layoutEntry{"2006-01-02T15:04:05-0700", KindZoned},
+		layoutEntry{"2006-01-02T15:04:05Z07", KindZoned},
+		// the tz CLI output format ("2006-01-02 15:04:05 -0700 MST") renders
+		// a zone whose abbreviation is numeric (e.g. Asia/Kathmandu's
+		// "+0545") as "+0545 +0545", which Go's "MST" element cannot
+		// re-parse; a second offset element reads the same value, so the
+		// CLI's own output round-trips (pinned by
+		// TestTimezoneOutputFormatRoundTrip)
+		layoutEntry{"2006-01-02 15:04:05 -0700 -0700", KindZoned},
+		// RFC822, RFC822Z, RFC850, Cookie, RFC1036
+		layoutEntry{"02 Jan 06 15:04 MST", KindZoned},
+		layoutEntry{"02 Jan 06 15:04 -0700", KindZoned},
+		layoutEntry{"Monday, 02-Jan-06 15:04:05 MST", KindZoned},
+		layoutEntry{"Monday, 02-Jan-2006 15:04:05 MST", KindZoned},
+		layoutEntry{"Mon, 02 Jan 06 15:04:05 -0700", KindZoned})
+	// bare times of day, stamped with today's date after parsing: the same
+	// time-of-day shapes accepted after a date, minus the leading space
+	for _, suffix := range timeOfDaySuffixes {
+		if suffix == "" {
+			continue
+		}
+		table = append(table, layoutEntry{strings.TrimPrefix(suffix, " "), KindTimeOnly})
+	}
+	return table
 }
 
 // outOfRange reports whether a time.Parse error means the input matched the
 // layout's shape but a component value was invalid (e.g. a 61-minute time);
 // such input is rejected immediately instead of falling through to layouts
-// that might silently misread it.
-func outOfRange(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "out of range")
+// that might silently misread it. The exception is an out-of-range hour
+// from a meridiem (12-hour) layout: hours 13-23 are valid in the 24-hour
+// layouts, so a 12-hour element reading one (e.g. the "17" in
+// "2024-01-15 17:45:00 +0545 +0545", or the "20" of a year) only means the
+// meridiem layout does not apply, and later layouts must still be tried.
+func outOfRange(layout string, err error) bool {
+	if err == nil || !strings.Contains(err.Error(), "out of range") {
+		return false
+	}
+	meridiem := strings.Contains(layout, "PM") || strings.Contains(layout, "pm")
+	return !(meridiem && strings.Contains(err.Error(), "hour out of range"))
 }
 
 // Parse tries the ordered layout table and returns the first successful
@@ -157,7 +175,7 @@ func Parse(source string, loc *time.Location) (time.Time, Kind, error) {
 			}
 			return t, entry.kind, nil
 		}
-		if outOfRange(err) {
+		if outOfRange(entry.layout, err) {
 			return time.Time{}, entry.kind, fmt.Errorf("invalid date/time %q: %v", source, err)
 		}
 	}

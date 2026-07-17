@@ -56,6 +56,41 @@ func TestParseMonthNameDates(t *testing.T) {
 	testParseWallClock(t, "22-Jul-2024 08:21", "2024-07-22 08:21:00")
 }
 
+func TestParseMeridiemAcrossDateShapes(t *testing.T) {
+	t.Parallel()
+	// every date base accepts the same joined and space-separated meridiem
+	// forms in both spellings, matching the bare-time and slash-date layers
+	testParseWallClock(t, "Jan 2, 2024 3:04PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "Jan 2, 2024 3:04:05pm", "2024-01-02 15:04:05")
+	testParseWallClock(t, "January 2, 2024 3:04:05PM", "2024-01-02 15:04:05")
+	testParseWallClock(t, "Mon, Jan 2, 2024 3:04 pm", "2024-01-02 15:04:00")
+	testParseWallClock(t, "Mon, Jan 2, 2024 15:04:05", "2024-01-02 15:04:05")
+	testParseWallClock(t, "Mon, Jan 2, 2024", "2024-01-02 00:00:00")
+	testParseWallClock(t, "2-Jan-2024 3:04 PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "2024-01-02 3:04 PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "2024-1-2 3:04PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "2024.01.15 3:04 pm", "2024-01-15 15:04:00")
+	testParseWallClock(t, "2024/01/15 3:04:05 PM", "2024-01-15 15:04:05")
+}
+
+func TestParseTwelveHourLayoutDoesNotBlockLaterLayouts(t *testing.T) {
+	t.Parallel()
+	// a 12-hour element reading a 24-hour value (or year digits) means the
+	// meridiem layout does not apply, not that the input is invalid; later
+	// layouts must still be tried ("2024-01-15 17:45:00 +0545 +0545" used
+	// to abort with "hour out of range" before reaching its zoned layout)
+	parsed, kind, err := Parse("2024-01-15 17:45:00 +0545 +0545", time.UTC)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if kind != KindZoned {
+		t.Errorf("kind = %v, want KindZoned", kind)
+	}
+	if _, offset := parsed.Zone(); offset != 5*3600+45*60 {
+		t.Errorf("offset = %d, want %d", offset, 5*3600+45*60)
+	}
+}
+
 func TestParseAnsic(t *testing.T) {
 	t.Parallel()
 	testParseWallClock(t, "Mon Jan  2 15:04:05 2006", "2006-01-02 15:04:05")
