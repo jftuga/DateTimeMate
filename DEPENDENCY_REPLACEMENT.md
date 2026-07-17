@@ -76,9 +76,16 @@ These were decided with the maintainer and are not open questions:
 - Verification for every PR:
   `go build ./... && go vet ./... && go test ./...`
   then `go mod tidy` and confirm the expected modules left `go.mod`/`go.sum`.
-- Version: `ModVersion` in `DateTimeMate.go:26` (currently `1.16.0`). Recent
-  history bumps the minor version once per merged PR batch; follow that
-  convention (or ask the maintainer per PR).
+- Version: `ModVersion` in `DateTimeMate.go:26` (currently `1.16.0`).
+  **The completed effort ships as `2.0.0`** — set `ModVersion` to `2.0.0` in
+  the final PR (PR 3). If PRs 1 or 2 are released individually beforehand,
+  they follow the repo's existing minor-bump convention. Note the Go modules
+  consequence: tagging a `v2.0.0` release requires changing the module path
+  to `github.com/jftuga/DateTimeMate/v2` in `go.mod` and in every internal
+  import (including `cmd/dtmate`), per
+  https://go.dev/doc/modules/major-version — the `/v2` suffix is mandatory
+  for major version 2+, otherwise `go install .../v2@latest` and module
+  resolution break.
 - README maintenance per PR: the "Acknowledgements > Imported Modules" list
   (README.md, near line 599) must be updated as modules are removed. Where
   code was derived from a removed module (carbon's layout list, the strftime
@@ -589,5 +596,7 @@ For each of the three PRs:
    comparing against the outputs shown in the README.
 4. Update README Acknowledgements (and for PR 3, the parsing notes).
    strftime stays listed in Acknowledgements as an imported module.
-5. Bump `ModVersion` per the repo's release convention.
+5. Version: PR 3 sets `ModVersion` to `2.0.0` (with the `/v2` module path
+   change described in "Repository orientation"); PRs 1 and 2 only bump the
+   minor version if released individually.
 6. MIT attribution header present in any derived file (PR 3 layout list).
