@@ -262,8 +262,8 @@ func TestFormatCommand(t *testing.T) {
 }
 
 func TestParseDateTimePre1970(t *testing.T) {
-	// parsetime silently corrupts pre-1970 date/times (e.g. 1950-01-01
-	// became 2026-01-09); these must parse correctly via standard layouts
+	// no layer of the parse pipeline has a 1970 floor (the retired
+	// parsetime fallback silently corrupted pre-1970 date/times)
 	testFormat(t, "1950-01-01 12:00:00", "%Y-%m-%d %H:%M:%S", "1950-01-01 12:00:00")
 	testFormat(t, "1900-02-28 23:59:59", "%Y-%m-%d %H:%M:%S", "1900-02-28 23:59:59")
 	testFormat(t, "1969-12-31T16:00:00Z", "%Y-%m-%d %H:%M:%S %Z", "1969-12-31 16:00:00 UTC")
@@ -295,24 +295,5 @@ func TestRelativeDatesExactly24Hours(t *testing.T) {
 	span := tomorrow.Sub(yesterday)
 	if span < 48*time.Hour-2*time.Second || span > 48*time.Hour+2*time.Second {
 		t.Errorf("yesterday to tomorrow spans %v, expected 48h", span)
-	}
-}
-
-func TestParsedYearMismatch(t *testing.T) {
-	jan2026 := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
-	// a corrupted parsetime result names a year absent from the input
-	if !parsedYearMismatch("Mon Feb 28 23:59:59 EST 1900", jan2026) {
-		t.Error("expected a mismatch for a 1900 input parsed as 2026")
-	}
-	// the year matching anywhere in the input is accepted
-	if parsedYearMismatch("2026-01-09 00:00:00", jan2026) {
-		t.Error("expected no mismatch when the input contains the parsed year")
-	}
-	// inputs without a year (time-only, fractional seconds) are never a mismatch
-	if parsedYearMismatch("12:34:56", jan2026) {
-		t.Error("expected no mismatch for a time-only input")
-	}
-	if parsedYearMismatch("12:34:56.1234", jan2026) {
-		t.Error("expected no mismatch for fractional seconds")
 	}
 }

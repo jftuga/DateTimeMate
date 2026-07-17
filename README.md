@@ -238,6 +238,22 @@ Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
 
 ## Date and Duration Parsing Notes
 
+* **Supported input formats** are a fixed, documented list rather than
+  fuzzy matching: ISO-style dates and date/times (padded or unpadded, `-`,
+  `.`, or `/` separated, `T` or space before the time, optional fractional
+  seconds, optional zone or offset), year and year-month forms (`2024`,
+  `2024-01`), month-name dates (`Jan 2, 2024`, `January 2, 2024 08:30:00`,
+  `2-Jan-2024 08:21:44`, ANSIC forms such as `Jan 2 15:04:05 2024` with
+  optional weekday and zone), RFC822/850/1036/1123, Unix and Ruby date
+  formats, slash dates, bare times of day (`08:30`, `3:04pm`,
+  `12:34:56.1234`, interpreted as today), Unix timestamps, and the relative
+  words `now`, `today`, `yesterday`, and `tomorrow`. Inputs outside this
+  list are rejected with an error instead of being guessed at.
+* **Zone abbreviations inside date/times** (such as `EDT` in
+  `Jan 15 12:00:00 EDT 2026`) are honored when the local time zone defines
+  them; an unrecognized abbreviation is rejected rather than silently read
+  as UTC. For arbitrary zone conversions, use `dtmate tz`, which resolves
+  abbreviations through its own zone table.
 * **Slash dates** default to US order, month first: `01/02/2024` is January 2.
 * * Set `DTMATE_DATE_ORDER=DMY` for day/month/year, or `MDY` to silence the
     ambiguity warning; a field greater than 12 (such as `25/12/2024`)
@@ -601,10 +617,12 @@ $ dtmate tz --force "1900-02-28 23:59:59 UTC" Europe/London
 <details>
 <summary>Imported Modules</summary>
 
-* carbon - https://github.com/golang-module/carbon
 * cobra - https://github.com/spf13/cobra
-* parsetime - https://github.com/tkuchiki/parsetime
 * strftime - https://github.com/lestrrat-go/strftime
+
+The fallback parser's layout table (`internal/dtparse`) is partly derived
+from the layout list in carbon - https://github.com/golang-module/carbon
+(MIT License).
 
 </details>
 
