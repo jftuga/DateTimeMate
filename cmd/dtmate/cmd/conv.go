@@ -11,6 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// these vars exist only so init can register the flags for --help output;
+// DisableFlagParsing means cobra never writes them, and the real values come
+// from parseConvArgs
 var optConvBrief bool
 var optConvDecimals int
 
@@ -32,12 +35,10 @@ var convCmd = &cobra.Command{
 		if len(positional) != 2 {
 			return fmt.Errorf("accepts 2 arg(s), received %d", len(positional))
 		}
-		optConvBrief = brief
-		optConvDecimals = decimals
 		if noNewline {
 			optRootNoNewline = true
 		}
-		outputConvDuration(positional[0], positional[1], optConvBrief, optConvDecimals)
+		outputConvDuration(positional[0], positional[1], brief, decimals)
 		return nil
 	},
 }

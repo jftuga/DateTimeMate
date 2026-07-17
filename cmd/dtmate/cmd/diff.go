@@ -54,7 +54,7 @@ var optDiffAbsolute bool
 func init() {
 	rootCmd.AddCommand(diffCmd)
 	diffCmd.Flags().BoolVarP(&optDiffBrief, "brief", "b", false, "output in brief format, such as: 1Y3W4D5h6m7s")
-	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read from STDIN instead of using -s/-e")
+	diffCmd.Flags().BoolVarP(&optDiffReadFromStdin, "stdin", "i", false, "read the start and end date/times from STDIN instead of arguments")
 	diffCmd.Flags().StringVarP(&optDiffConv, "conv", "c", "", "convert resulting duration to another group of units")
 	diffCmd.Flags().IntVarP(&optDiffDecimals, "decimals", "d", 0, "with -c: show the smallest unit with this many decimal places, rounded")
 	diffCmd.Flags().BoolVarP(&optDiffAbsolute, "absolute", "A", false, "always output an absolute (positive) duration")

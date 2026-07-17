@@ -48,6 +48,7 @@ func TestOutOfRangeDateTimeRejected(t *testing.T) {
 		"2/30/2024",
 		"1/32/2024",
 		"1/2/2024 13:04PM",
+		"1/2/2024 13:04 PM",
 	}
 	for _, source := range invalid {
 		if _, err := Reformat(source, "%F"); err == nil {
@@ -177,4 +178,22 @@ func TestSlashDateTimeSuffixVariants(t *testing.T) {
 	testFormat(t, "1/2/2024 3:04pm", "%F %H:%M", "2024-01-02 15:04")
 	testFormat(t, "1/2/2024 3:04:05pm", "%F %T", "2024-01-02 15:04:05")
 	testFormat(t, "1/2/2024 3:04PM", "%F %H:%M", "2024-01-02 15:04")
+	testFormat(t, "1/2/2024 3:04 PM", "%F %H:%M", "2024-01-02 15:04")
+	testFormat(t, "1/2/2024 3:04:05 pm", "%F %T", "2024-01-02 15:04:05")
+}
+
+func TestSpacedAmPmParsing(t *testing.T) {
+	// a space before am/pm parses the same as the joined form, in bare
+	// times and month-name dates alike (regression from the parsetime
+	// removal: its US format allowed whitespace before the meridiem)
+	testFormat(t, "Jan 2, 2024 3:04 PM", "%F %H:%M", "2024-01-02 15:04")
+	testFormat(t, "January 2, 2024 3:04:05 pm", "%F %T", "2024-01-02 15:04:05")
+	diff := NewDiff(DiffWithStart("11:00 AM"), DiffWithEnd("11:00PM"))
+	result, _, err := diff.CalculateDiff()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "12 hours" {
+		t.Errorf("[computed: %v] != [correct: 12 hours]", result)
+	}
 }

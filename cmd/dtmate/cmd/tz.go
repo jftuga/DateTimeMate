@@ -88,35 +88,16 @@ func listZones() {
 		if def.Ambiguous != "" {
 			note = " [ambiguous; also: " + def.Ambiguous + "]"
 		}
-		if isDSTAwareAbbrev(abbrev) {
-			note += " [DST aware]"
-		}
 		fmt.Printf("%-6s UTC%s  %s%s\n", abbrev, DateTimeMate.FormatUTCOffset(def.Offset), def.Description, note)
 	}
 	fmt.Println()
-	fmt.Println("Abbreviations marked [DST aware] resolve as IANA zones and follow their DST")
-	fmt.Println("rules; the offset shown for them is their standard (winter) offset.")
+	fmt.Println("Abbreviations always mean the fixed offsets shown, on any date: CET on a")
+	fmt.Println("summer date stays UTC+01:00 rather than becoming CEST.")
 	fmt.Println("IANA zone names such as America/New_York or Asia/Kolkata are also supported")
 	fmt.Println("and preferred: unlike the fixed offsets above, they are DST aware.")
 	fmt.Println("List them with: dtmate tz --list-iana")
 	fmt.Printf("Override an ambiguous abbreviation with the %s environment\n", DateTimeMate.ZoneAliasesEnvVar)
 	fmt.Printf("variable, e.g. %s=\"IST=Asia/Jerusalem|CST=Asia/Shanghai\"\n", DateTimeMate.ZoneAliasesEnvVar)
-}
-
-// isDSTAwareAbbrev reports whether an abbreviation resolves as an IANA
-// zone whose UTC offset changes over the year (e.g. CET), meaning the
-// fixed offset shown in the abbreviation table only applies in winter;
-// conversions resolve IANA names before the abbreviation table, so such
-// entries are DST aware in practice
-func isDSTAwareAbbrev(abbrev string) bool {
-	loc, err := time.LoadLocation(abbrev)
-	if err != nil {
-		return false
-	}
-	year := time.Now().Year()
-	_, january := time.Date(year, time.January, 15, 12, 0, 0, 0, time.UTC).In(loc).Zone()
-	_, july := time.Date(year, time.July, 15, 12, 0, 0, 0, time.UTC).In(loc).Zone()
-	return january != july
 }
 
 // listIANAZones prints each IANA zone name with the UTC offset and

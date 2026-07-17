@@ -245,8 +245,9 @@ Use "dtmate --help-all" for duration syntax, brief units, and conversion notes.
   `2024-01`), month-name dates (`Jan 2, 2024`, `January 2, 2024 08:30:00`,
   `2-Jan-2024 08:21:44`, ANSIC forms such as `Jan 2 15:04:05 2024` with
   optional weekday and zone), RFC822/850/1036/1123, Unix and Ruby date
-  formats, slash dates, bare times of day (`08:30`, `3:04pm`,
-  `12:34:56.1234`, interpreted as today), Unix timestamps, and the relative
+  formats, slash dates, bare times of day (`08:30`, `3:04pm`, `11:00 AM`,
+  `12:34:56.1234`, interpreted as today; am/pm may be joined to the time or
+  separated by a space), Unix timestamps, and the relative
   words `now`, `today`, `yesterday`, and `tomorrow`. Inputs outside this
   list are rejected with an error instead of being guessed at.
 * **Zone abbreviations inside date/times** (such as `EDT` in
