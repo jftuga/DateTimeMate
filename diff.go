@@ -2,7 +2,7 @@ package DateTimeMate
 
 import (
 	"fmt"
-	"github.com/hako/durafmt"
+	"github.com/jftuga/DateTimeMate/internal/humandur"
 	"time"
 )
 
@@ -78,33 +78,7 @@ func (diff *Diff) CalculateDiff() (string, time.Duration, error) {
 	if diff.Absolute {
 		duration = duration.Abs()
 	}
-	parsed := durafmt.Parse(duration)
-	difference := fmt.Sprintf("%v", parsed)
-	// durafmt's smallest unit is the microsecond, so append any
-	// sub-microsecond remainder: a 1500ns diff renders as
-	// "1 microsecond 500 nanoseconds" and a sub-microsecond diff is a
-	// nanosecond count instead of an empty string
-	if rem := duration % time.Microsecond; rem != 0 {
-		ns := rem.Nanoseconds()
-		if ns < 0 {
-			ns = -ns
-		}
-		unit := "nanoseconds"
-		if ns == 1 {
-			unit = "nanosecond"
-		}
-		nsPart := fmt.Sprintf("%d %s", ns, unit)
-		// durafmt renders a sub-microsecond duration as "" ("-" when
-		// negative), so the nanosecond count becomes the whole output
-		if difference == "" || difference == "-" {
-			if duration < 0 {
-				nsPart = "-" + nsPart
-			}
-			difference = nsPart
-		} else {
-			difference += " " + nsPart
-		}
-	}
+	difference := humandur.Format(duration)
 	if diff.Brief {
 		difference = shrinkPeriod(difference)
 	}

@@ -21,7 +21,7 @@ landed.
 
 | Step | State | Notes |
 |---|---|---|
-| PR 1: durafmt -> internal/humandur | not started | |
+| PR 1: durafmt -> internal/humandur | implemented | on branch `remove-deps`, awaiting commit/PR |
 | PR 2: carbon arithmetic -> internal/datecalc | not started | |
 | PR 3: unified fallback parser (internal/dtparse) | not started | |
 | strftime | no work planned | kept as external dependency, see locked decision 3 |

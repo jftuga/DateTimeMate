@@ -603,7 +603,6 @@ $ dtmate tz --force "1900-02-28 23:59:59 UTC" Europe/London
 
 * carbon - https://github.com/golang-module/carbon
 * cobra - https://github.com/spf13/cobra
-* durafmt - https://github.com/hako/durafmt
 * parsetime - https://github.com/tkuchiki/parsetime
 * strftime - https://github.com/lestrrat-go/strftime
 
