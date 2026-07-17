@@ -7,6 +7,7 @@ package datecalc
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -33,6 +34,12 @@ func Apply(t time.Time, unit string, n int, sign int) (time.Time, error) {
 		return t.AddDate(0, 0, sign*n), nil
 	}
 	if d, ok := clockUnits[unit]; ok {
+		// the multiplication below is int64 nanoseconds, which silently
+		// wraps for large counts of the bigger units (about 2.56 million
+		// hours); reject anything that cannot be represented
+		if limit := math.MaxInt64 / int64(d); int64(n) > limit || int64(n) < -limit {
+			return t, fmt.Errorf("%d %ss exceeds the supported range of about 292 years", n, unit)
+		}
 		return t.Add(time.Duration(sign*n) * d), nil
 	}
 	return t, fmt.Errorf("unknown unit: %q", unit)

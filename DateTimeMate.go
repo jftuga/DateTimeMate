@@ -22,7 +22,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.18.0"
+	ModVersion string = "1.19.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -193,9 +193,10 @@ func slashDateFields(source string) (first, second, yearDigits int, ok bool) {
 }
 
 // slashDateTimeSuffixes are the time-of-day layouts accepted after a
-// slash-separated date; the empty suffix accepts a bare date, and the
-// space and "T" separated forms both accept times with and without seconds
-var slashDateTimeSuffixes = []string{"", " 15:04:05", "T15:04:05", " 15:04", "T15:04", " 3:04:05PM", " 3:04PM", " 3:04:05pm", " 3:04pm"}
+// slash-separated date; the empty suffix accepts a bare date, the space and
+// "T" separated forms both accept times with and without seconds, and am/pm
+// is accepted both joined to the time and separated by a space
+var slashDateTimeSuffixes = []string{"", " 15:04:05", "T15:04:05", " 15:04", "T15:04", " 3:04:05PM", " 3:04PM", " 3:04:05pm", " 3:04pm", " 3:04:05 PM", " 3:04 PM", " 3:04:05 pm", " 3:04 pm"}
 
 // parseSlashDate parses slash-separated dates, whose field order the layered
 // parsers disagree on: month first (the default) or day first when

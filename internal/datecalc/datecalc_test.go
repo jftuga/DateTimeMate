@@ -1,6 +1,7 @@
 package datecalc
 
 import (
+	"math"
 	"testing"
 	"time"
 )
@@ -68,6 +69,36 @@ func TestApplyDST(t *testing.T) {
 	}
 	if gotHours.Hour() != 13 {
 		t.Errorf("adding 24 hours across DST should land at 13, got %d", gotHours.Hour())
+	}
+}
+
+func TestApplyOverflowRejected(t *testing.T) {
+	t.Parallel()
+	base := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	// counts whose nanosecond total exceeds int64 used to wrap silently
+	// (3,000,000 hours moved the date backward to 1781)
+	for _, tt := range []struct {
+		unit string
+		n    int
+	}{
+		{"hour", 3_000_000},
+		{"minute", 200_000_000},
+	} {
+		if _, err := Apply(base, tt.unit, tt.n, +1); err == nil {
+			t.Errorf("Apply(%d %ss): expected an overflow error, got nil", tt.n, tt.unit)
+		}
+		if _, err := Apply(base, tt.unit, tt.n, -1); err == nil {
+			t.Errorf("Apply(-%d %ss): expected an overflow error, got nil", tt.n, tt.unit)
+		}
+	}
+	// the largest representable hour count still works
+	limit := int(int64(math.MaxInt64) / int64(time.Hour))
+	got, err := Apply(base, "hour", limit, +1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.After(base) {
+		t.Errorf("Apply(%d hours) = %v, expected a time after %v", limit, got, base)
 	}
 }
 

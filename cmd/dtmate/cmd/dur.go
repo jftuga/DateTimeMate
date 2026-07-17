@@ -22,7 +22,6 @@ var durCmd = &cobra.Command{
 }
 
 var (
-	//optDurFrom   string
 	optDurAdd    bool
 	optDurSub    bool
 	optDurUntil  string

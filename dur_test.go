@@ -249,6 +249,32 @@ func TestDurPeriodErrorQuotesInput(t *testing.T) {
 	}
 }
 
+func TestDurOverflowingClockUnitsRejected(t *testing.T) {
+	t.Parallel()
+	// hour and minute counts whose nanosecond total exceeds int64 used to
+	// wrap silently ("3000000 hours" moved the date back to 1781)
+	for _, period := range []string{"3000000 hours", "200000000 minutes"} {
+		dur := NewDur(DurWithFrom("2024-01-01"), DurWithDur(period))
+		if _, err := dur.Add(); err == nil {
+			t.Errorf("expected an overflow error for %q, got nil", period)
+		}
+		if _, err := dur.Sub(); err == nil {
+			t.Errorf("expected an overflow error subtracting %q, got nil", period)
+		}
+	}
+	// a large but representable count still works
+	dur := NewDur(DurWithFrom("2024-01-01 00:00:00"), DurWithDur("2000000 hours"))
+	add, err := dur.Add()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the exact hour depends on the local zone's offsets, but the date is
+	// stable and a silent wrap would land centuries away
+	if len(add) != 1 || !strings.HasPrefix(add[0], "2252-02-28") {
+		t.Errorf("[computed: %v] != [correct: 2252-02-28 ...]", add)
+	}
+}
+
 func TestDurZeroPeriodUntil(t *testing.T) {
 	t.Parallel()
 	// a period that does not advance must error instead of looping forever

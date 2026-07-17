@@ -47,6 +47,10 @@ func TestParseMonthNameDates(t *testing.T) {
 	testParseWallClock(t, "January 2, 2024", "2024-01-02 00:00:00")
 	testParseWallClock(t, "January 2, 2024 08:30:00", "2024-01-02 08:30:00")
 	testParseWallClock(t, "Tue, Jan 2, 2024 3:04 PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "Jan 2, 2024 3:04 PM", "2024-01-02 15:04:00")
+	testParseWallClock(t, "Jan 2, 2024 3:04:05 pm", "2024-01-02 15:04:05")
+	testParseWallClock(t, "January 2, 2024 3:04:05 PM", "2024-01-02 15:04:05")
+	testParseWallClock(t, "January 2, 2024 3:04 pm", "2024-01-02 15:04:00")
 	testParseWallClock(t, "2-Jan-2024", "2024-01-02 00:00:00")
 	testParseWallClock(t, "22-Jul-2024 08:21:44", "2024-07-22 08:21:44")
 	testParseWallClock(t, "22-Jul-2024 08:21", "2024-07-22 08:21:00")
@@ -76,6 +80,9 @@ func TestParseTimeOnlyStamping(t *testing.T) {
 		"11:00PM":       "23:00:00",
 		"3:04pm":        "15:04:00",
 		"3:04:05PM":     "15:04:05",
+		"11:00 AM":      "11:00:00",
+		"3:04 pm":       "15:04:00",
+		"3:04:05 PM":    "15:04:05",
 		"12:34:56.1234": "12:34:56.1234",
 	} {
 		parsed, kind, err := Parse(source, loc)
@@ -145,7 +152,7 @@ func TestParseOutOfRangeRejected(t *testing.T) {
 	t.Parallel()
 	// a layout-shaped input with an invalid component errors immediately
 	// instead of trying later layouts
-	for _, source := range []string{"2024-13-01", "2024.02.30", "2024-1-32", "25:00", "08:61", "13:04PM", "Jan 32, 2024"} {
+	for _, source := range []string{"2024-13-01", "2024.02.30", "2024-1-32", "25:00", "08:61", "13:04PM", "13:04 PM", "Jan 32, 2024"} {
 		if _, _, err := Parse(source, time.UTC); err == nil {
 			t.Errorf("Parse(%q): expected an out-of-range error, got nil", source)
 		}

@@ -72,9 +72,17 @@ var layouts = []layoutEntry{
 	// month name and then fails on the remainder
 	{"January 2, 2006 15:04:05", KindWallClock},
 	{"January 2, 2006 15:04", KindWallClock},
+	{"January 2, 2006 3:04:05 PM", KindWallClock},
+	{"January 2, 2006 3:04:05 pm", KindWallClock},
+	{"January 2, 2006 3:04 PM", KindWallClock},
+	{"January 2, 2006 3:04 pm", KindWallClock},
 	{"January 2, 2006", KindWallClock},
 	{"Jan 2, 2006 15:04:05", KindWallClock},
 	{"Jan 2, 2006 15:04", KindWallClock},
+	{"Jan 2, 2006 3:04:05 PM", KindWallClock},
+	{"Jan 2, 2006 3:04:05 pm", KindWallClock},
+	{"Jan 2, 2006 3:04 PM", KindWallClock},
+	{"Jan 2, 2006 3:04 pm", KindWallClock},
 	{"Jan 2, 2006", KindWallClock},
 	{"Mon, Jan 2, 2006 3:04 PM", KindWallClock},
 	// day-first month-name dates; strftime's %v renders this shape
@@ -107,13 +115,18 @@ var layouts = []layoutEntry{
 	// bare times of day, stamped with today's date after parsing; Go's "PM"
 	// element matches only uppercase and "pm" only lowercase, so both
 	// spellings need a layout (same reason slashDateTimeSuffixes in the
-	// root package carries both)
+	// root package carries both), and am/pm is accepted both joined to the
+	// time and separated by a space
 	{"15:04:05", KindTimeOnly},
 	{"15:04", KindTimeOnly},
 	{"3:04:05PM", KindTimeOnly},
 	{"3:04PM", KindTimeOnly},
 	{"3:04:05pm", KindTimeOnly},
 	{"3:04pm", KindTimeOnly},
+	{"3:04:05 PM", KindTimeOnly},
+	{"3:04 PM", KindTimeOnly},
+	{"3:04:05 pm", KindTimeOnly},
+	{"3:04 pm", KindTimeOnly},
 }
 
 // outOfRange reports whether a time.Parse error means the input matched the

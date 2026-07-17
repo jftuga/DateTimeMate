@@ -23,7 +23,7 @@ landed.
 |---|---|---|
 | PR 1: durafmt -> internal/humandur | merged | PR #49, commit 425cc95 |
 | PR 2: carbon arithmetic -> internal/datecalc | merged | PR #50, commit 18eda1b |
-| PR 3: unified fallback parser (internal/dtparse) | implemented | on branch `remove-deps-pr3`, awaiting commit/PR |
+| PR 3: unified fallback parser (internal/dtparse) | merged | PR #51, commit 276d683 |
 | strftime | no work planned | kept as external dependency, see locked decision 3 |
 
 ## Locked decisions
