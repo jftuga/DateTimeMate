@@ -71,6 +71,8 @@ The command-line program, `dtmate` *(along with the golang package)* allows you 
 * * UTC offsets in seconds, such as `19800` for UTC+5:30
 * the source may also be a unix timestamp in seconds or milliseconds, such as `1700265600`
 * pin ambiguous abbreviations with an environment variable: `DTMATE_TZ_ALIASES="IST=Asia/Jerusalem|CST=Asia/Shanghai"`
+* reformat the result with strftime specifiers: `dtmate tz "2024-01-15 12:00:00 UTC" America/New_York --format "%Y-%m-%d %I:%M %p %Z"`
+* * output: `2024-01-15 07:00 AM EST`
 * list all supported abbreviations: `dtmate tz --list-zones`
 * list all IANA zone names with their current offsets: `dtmate tz --list-iana`
 </details>
@@ -570,6 +572,10 @@ $ dtmate tz "1700265600" UTC
 # a UTC offset in seconds is also accepted (19800 = UTC+5:30)
 $ dtmate tz "2024-01-15 12:00:00 UTC" 19800
 2024-01-15 17:30:00 +0530 UTC+05:30
+
+# reformat the converted result with strftime specifiers
+$ dtmate tz "2024-01-15 12:00:00 UTC" America/New_York --format "%Y-%m-%d %I:%M %p %Z"
+2024-01-15 07:00 AM EST
 
 # ambiguous abbreviations warn on stderr and use their primary meaning
 $ dtmate tz "2024-01-15 12:00:00 UTC" IST
