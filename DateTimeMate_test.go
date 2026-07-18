@@ -42,6 +42,36 @@ func TestReformatIntegerDate(t *testing.T) {
 	testFormat(t, "20240101080102", "%F %T", "2024-01-01 08:01:02")
 }
 
+func TestFormatTimePreservesZone(t *testing.T) {
+	// FormatTime must render in the time's own location: %Z, %z and %s all
+	// reflect the non-local zone instead of being reinterpreted locally
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := time.Date(2024, 1, 15, 7, 0, 0, 0, loc)
+	for format, correct := range map[string]string{
+		"%Y-%m-%d %H:%M:%S %Z": "2024-01-15 07:00:00 EST",
+		"%z":                   "-0500",
+		"%s":                   strconv.FormatInt(src.Unix(), 10),
+	} {
+		computed, err := FormatTime(src, format)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if computed != correct {
+			t.Errorf("[computed: %v] != [correct: %v]", computed, correct)
+		}
+	}
+}
+
+func TestFormatTimeInvalidFormat(t *testing.T) {
+	// a dangling % is an invalid strftime pattern and must error
+	if _, err := FormatTime(time.Now(), "%Y-%m-%d %"); err == nil {
+		t.Error("expected an error for an invalid format, got nil")
+	}
+}
+
 func TestNegativeTimestampRejected(t *testing.T) {
 	// negative integers are rejected everywhere as negative timestamps
 	for _, source := range []string{"-170000000", "-1700265600", "-17000000000"} {

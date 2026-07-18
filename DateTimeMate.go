@@ -22,7 +22,7 @@ var ReadmeMd string
 
 const (
 	ModName    string = "DateTimeMate"
-	ModVersion string = "1.20.0"
+	ModVersion string = "1.21.0"
 	ModUrl     string = "https://github.com/jftuga/DateTimeMate"
 )
 
@@ -357,17 +357,24 @@ func parseDateTimeIn(source string, loc *time.Location) (time.Time, error) {
 //   - The source date cannot be parsed
 //   - The time parser initialization fails
 func Reformat(source string, outputFormat string) (string, error) {
-	source = strings.TrimSpace(source)
+	t, err := parseDateTimeOrUnix(strings.TrimSpace(source))
+	if err != nil {
+		return "", err
+	}
+	return FormatTime(t, outputFormat)
+}
 
+// FormatTime renders an already-parsed time.Time using strftime format
+// specifiers, with additional support for Unix seconds via '%s'. Unlike
+// Reformat it performs no parsing, so the time's location (and therefore
+// %Z, %z and %s) is preserved exactly.
+//
+// Returns an error if the outputFormat is invalid.
+func FormatTime(t time.Time, outputFormat string) (string, error) {
 	// creates a new Strftime instance
 	// outputFormat is a pattern string that follows strftime formatting
 	// the additional formatting behavior allows this to also use the unix time %s modifier
 	f, err := strftime.New(outputFormat, strftime.WithUnixSeconds('s'))
-	if err != nil {
-		return "", err
-	}
-
-	t, err := parseDateTimeOrUnix(source)
 	if err != nil {
 		return "", err
 	}

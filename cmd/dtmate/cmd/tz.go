@@ -15,6 +15,7 @@ import (
 var optTzListZones bool
 var optTzListIANA bool
 var optTzForce bool
+var optTzFormat string
 
 var tzCmd = &cobra.Command{
 	Use:   "tz [date/time] [target time zone]",
@@ -43,6 +44,7 @@ func init() {
 	tzCmd.Flags().BoolVarP(&optTzListZones, "list-zones", "l", false, "list the supported time zone abbreviations and exit")
 	tzCmd.Flags().BoolVarP(&optTzListIANA, "list-iana", "I", false, "list the IANA time zone names (e.g. America/New_York) and exit")
 	tzCmd.Flags().BoolVarP(&optTzForce, "force", "f", false, "convert date/times before 1970 despite unreliable time zone data")
+	tzCmd.Flags().StringVar(&optTzFormat, "format", "", "output results with strftime formatting")
 	tzCmd.MarkFlagsMutuallyExclusive("list-zones", "list-iana")
 }
 
@@ -73,6 +75,13 @@ func outputTzConversion(source, target string) {
 		fmt.Fprintln(os.Stderr, "warning:", warning)
 	}
 	formatted := result.Format("2006-01-02 15:04:05 -0700 MST")
+	if optTzFormat != "" {
+		formatted, err = DateTimeMate.FormatTime(result, optTzFormat)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
 	if optRootNoNewline {
 		fmt.Print(formatted)
 	} else {
