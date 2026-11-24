@@ -57,6 +57,7 @@ func TestTimezoneUnixTimestampSources(t *testing.T) {
 	// TZ-1 (decided): a unix timestamp already denotes an instant, so a
 	// zone suffix is contradictory
 	mustFailConvert(t, conv, "1700265600 UTC", "America/New_York", "unix timestamp cannot carry a time zone")
+	mustFailConvert(t, conv, "1700265600000 UTC", "America/New_York", "unix timestamp cannot carry a time zone")
 
 	// compact integer date/times with a zone suffix keep working and are
 	// interpreted in that zone

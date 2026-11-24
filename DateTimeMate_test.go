@@ -23,6 +23,27 @@ func TestReformatWinterUnixSeconds(t *testing.T) {
 	}
 }
 
+func TestReformatUnixTimestampRange(t *testing.T) {
+	// Timestamp classification must not depend on the platform's int size.
+	for _, tc := range []struct {
+		source string
+		want   string
+	}{
+		{"1700265600", "1700265600"},
+		{"2147483647", "2147483647"},
+		{"2147483648", "2147483648"},
+		{"9999999999", "9999999999"},
+		{"1700265600123", "1700265600"},
+		{"+1700265600123", "1700265600"},
+		{" 1700265600123 ", "1700265600"},
+		{"9999999999999", "9999999999"},
+	} {
+		t.Run(tc.source, func(t *testing.T) {
+			testFormat(t, tc.source, "%s", tc.want)
+		})
+	}
+}
+
 func TestReformatAmbiguousTimestampLength(t *testing.T) {
 	// 11 and 12 digit integers are neither seconds nor milliseconds; a
 	// 14-digit integer is a compact date/time, so one that is not a valid

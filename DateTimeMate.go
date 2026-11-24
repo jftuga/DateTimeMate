@@ -416,10 +416,10 @@ func unixStringToTime(timestamp string) (time.Time, error) {
 	}
 }
 
-// isPureIntegerAtoi reports whether a string contains a valid base-10 integer.
-// It returns true only if the string can be fully converted to an integer.
-func isPureIntegerAtoi(s string) bool {
-	_, err := strconv.Atoi(s)
+// isPureInteger reports whether a string contains a valid signed 64-bit
+// base-10 integer, matching the range used by unixStringToTime on every platform.
+func isPureInteger(s string) bool {
+	_, err := strconv.ParseInt(s, 10, 64)
 	return err == nil
 }
 
@@ -432,7 +432,7 @@ func isPureIntegerAtoi(s string) bool {
 // parsed as date/times
 func isUnixTimestamp(s string) bool {
 	digits := timestampDigits(s)
-	return isPureIntegerAtoi(s) && digits >= 10 && digits <= 13
+	return isPureInteger(s) && digits >= 10 && digits <= 13
 }
 
 // parseIntegerDateTime parses a pure-integer date/time that is not a Unix
@@ -470,7 +470,7 @@ func parseDateTimeOrUnix(source string) (time.Time, error) {
 	if source == "" {
 		return time.Time{}, ErrEmptyInput
 	}
-	if isPureIntegerAtoi(source) {
+	if isPureInteger(source) {
 		if strings.HasPrefix(source, "-") {
 			return time.Time{}, fmt.Errorf("timestamps can't be negative: %v", source)
 		}

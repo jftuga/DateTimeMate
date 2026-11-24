@@ -208,7 +208,7 @@ func (c *TimeZoneConverter) parseWallClockIn(input, wall, zone string, loc *time
 	if ConvertRelativeDateToActual(wall) != wall {
 		return time.Time{}, fmt.Errorf("relative date/times cannot carry a time zone: %q", input)
 	}
-	if isPureIntegerAtoi(wall) {
+	if isPureInteger(wall) {
 		if isUnixTimestamp(wall) {
 			return time.Time{}, fmt.Errorf("a unix timestamp cannot carry a time zone: %q", input)
 		}
