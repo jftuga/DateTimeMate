@@ -175,6 +175,52 @@ func TestDurFractionalPeriod(t *testing.T) {
 	testDurAddSubContains(t, from, briefPeriod, correctAdd, correctSub)
 }
 
+func TestApplyPeriodFractionalUnits(t *testing.T) {
+	t.Parallel()
+	from := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		amount, unit string
+		want         time.Duration
+	}{
+		{"0.5", "year", 182*24*time.Hour + 15*time.Hour},
+		{"0.5", "week", 84 * time.Hour},
+		{"0.5", "day", 12 * time.Hour},
+		{"1.5", "hour", 90 * time.Minute},
+		{"0.5", "minute", 30 * time.Second},
+		{"0.5", "second", 500 * time.Millisecond},
+		{"0.5", "millisecond", 500 * time.Microsecond},
+		{"0.5", "microsecond", 500 * time.Nanosecond},
+		{"0.5", "nanosecond", time.Nanosecond},
+		{"0.4", "nanosecond", 0},
+		{"0.0015", "microsecond", 2 * time.Nanosecond},
+	} {
+		t.Run(tt.amount+"_"+tt.unit, func(t *testing.T) {
+			period := [][2]string{{tt.amount, tt.unit}}
+			added, err := applyPeriod(from, period, opAdd)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := from.Add(tt.want); !added.Equal(want) {
+				t.Errorf("add: got %v, want %v", added, want)
+			}
+			subtracted, err := applyPeriod(from, period, opSub)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := from.Add(-tt.want); !subtracted.Equal(want) {
+				t.Errorf("subtract: got %v, want %v", subtracted, want)
+			}
+			restored, err := applyPeriod(added, period, opSub)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !restored.Equal(from) {
+				t.Errorf("roundtrip: got %v, want %v", restored, from)
+			}
+		})
+	}
+}
+
 func TestDurInvalidPeriodText(t *testing.T) {
 	t.Parallel()
 	// no part of a period may be silently ignored
