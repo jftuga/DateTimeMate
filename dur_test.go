@@ -452,7 +452,7 @@ func TestDurAddUntil(t *testing.T) {
 	t.Parallel()
 	from := "2024-06-28T04:25:41Z"
 	period := "5W1h1m2s"
-	until := "2024-10-11 07:28:47"
+	until := "2024-10-11T07:28:47Z"
 	allCorrectAdd := []string{"2024-08-02 05:26:43", "2024-09-06 06:27:45", "2024-10-11 07:28:47"}
 	testDurAddUntil(t, from, until, period, allCorrectAdd)
 }
