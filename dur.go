@@ -257,11 +257,8 @@ func applyPeriod(to time.Time, periodMatches [][2]string, op int) (time.Time, er
 			// the fractional part of an amount is applied as nanoseconds
 			// (unitNanos in conv.go defines a year as 365.25 days), so the
 			// calendar-aware datecalc functions still handle the integer part
-			ns := int(math.Round(frac * float64(unitNanos[word])))
-			to, err = datecalc.Apply(to, "nanosecond", ns, sign)
-			if err != nil {
-				return to, err
-			}
+			ns := time.Duration(math.Round(frac * float64(unitNanos[word])))
+			to = to.Add(time.Duration(sign) * ns)
 		}
 	}
 	return to, nil
