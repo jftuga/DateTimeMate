@@ -285,7 +285,8 @@ func TestFormatCommand(t *testing.T) {
 	correct = "UTC"
 	testFormat(t, source, fmt, correct)
 
-	source = "Mon Jul 22 08:40:33 EDT 2024"
+	// Supply the offset so EDT does not depend on the local time zone.
+	source = "2024-07-22 08:40:33 -0400 EDT"
 	fmt = "%Z %z"
 	correct = "EDT -0400"
 	testFormat(t, source, fmt, correct)
